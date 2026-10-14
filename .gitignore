@@ -1,0 +1,11 @@
+**/target/
+**/node_modules/
+backend/uploads/
+frontend/dist/
+frontend/.env.local
+**/.env
+**/.env.*
+.idea/
+work/
+outputs/
+.DS_Store

@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: music-player-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: music_player
+      POSTGRES_USER: music_user
+      POSTGRES_PASSWORD: music_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - soundwave_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U music_user -d music_player"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+    container_name: soundwave-api
+    restart: unless-stopped
+    environment:
+      PORT: 8181
+      DB_URL: jdbc:postgresql://postgres:5432/music_player
+      DB_USERNAME: music_user
+      DB_PASSWORD: music_password
+      FRONTEND_ORIGIN: http://localhost:4173
+      AUDIO_STORAGE_DIR: /var/data/uploads
+    ports:
+      - "8181:8181"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - audio_data:/var/data/uploads
+
+  web:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: http://localhost:8181
+    container_name: soundwave-web
+    restart: unless-stopped
+    ports:
+      - "4173:80"
+    depends_on:
+      - api
+
+volumes:
+  soundwave_postgres_data:
+  audio_data:
