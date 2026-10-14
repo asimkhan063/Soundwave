@@ -2,47 +2,35 @@ services:
   - type: web
     name: soundwave-api
     runtime: docker
-    plan: 0.5c-512mb
+    plan: free
     region: singapore
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     healthCheckPath: /api/health
-    disk:
-      name: soundwave-audio
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
-      - key: DB_HOST
-        fromDatabase:
-          name: soundwave-db
-          property: host
-      - key: DB_PORT
-        fromDatabase:
-          name: soundwave-db
-          property: port
-      - key: DB_NAME
-        fromDatabase:
-          name: soundwave-db
-          property: database
-      - key: DB_USERNAME
-        fromDatabase:
-          name: soundwave-db
-          property: user
-      - key: DB_PASSWORD
-        fromDatabase:
-          name: soundwave-db
-          property: password
       - key: JWT_SECRET
         generateValue: true
+      - key: AUDIO_STORAGE_PROVIDER
+        value: s3
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "5432"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USERNAME
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
       - key: FRONTEND_ORIGIN
         sync: false
-      - key: AUDIO_STORAGE_DIR
-        value: /var/data/uploads
-
-databases:
-  - name: soundwave-db
-    databaseName: music_player
-    user: music_user
-    plan: free
-    region: singapore
-    postgresMajorVersion: "17"
+      - key: AWS_ENDPOINT_URL_S3
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false

@@ -87,9 +87,8 @@ Invoke-RestMethod -Method Post -Uri http://localhost:8181/api/admin/songs -Heade
 - Compose database credentials and the JWT fallback secret are for local development only. Set private environment variables before deployment.
 - Local PostgreSQL is exposed on host port `5433` to avoid colliding with an existing PostgreSQL installation on `5432`.
 - The Compose volume is named `soundwave_postgres_data`. If a prior volume existed, it is left untouched.
-- Local audio uploads are stored in `backend/uploads/`; this folder is ignored by Git. Use persistent or object storage before production deployment because hosted app filesystems may be temporary.
-- The Docker Compose audio volume is convenient for local use. For hosted production, configure persistent or object storage before deploying uploads.
-- A Render Blueprint is included in `render.yaml` for the API, PostgreSQL, and persistent audio disk. It uses a paid API compute plan because Render persistent disks require a paid web service; review the resource plan and current pricing before creating the Blueprint.
+- Local audio uploads use `backend/uploads/`; this folder is ignored by Git. The Docker Compose audio volume keeps local uploads across container restarts.
+- `render.yaml` prepares a free Render API service using Neon PostgreSQL and Neon Object Storage for uploaded audio. Add the secrets in Render's Blueprint setup; never commit them to this repository.
 - Deploy the frontend as a separate Render Static Site with root directory `frontend`, build command `npm ci && npm run build`, publish directory `dist`, and build-time variable `VITE_API_BASE_URL` set to the deployed API URL (include `https://`). Then set the API service's `FRONTEND_ORIGIN` to the deployed frontend URL and redeploy the API.
-- `audioKey` is metadata only at this stage. The next implementation step is private object storage, upload, and short-lived playback URLs; the UI does not stream audio yet.
+- When S3-compatible object storage is enabled, uploaded audio is kept in a private bucket and playback uses a one-hour signed URL. Keep the bucket private; do not enable public bucket access for this app.
 - Hibernate schema changes are validated against Flyway migrations (`ddl-auto: validate`). Add future schema changes as new numbered migration files; do not edit a migration already applied to a shared database.

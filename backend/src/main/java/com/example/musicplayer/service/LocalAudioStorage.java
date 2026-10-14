@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpStatus;
@@ -16,7 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
-public class LocalAudioStorage {
+@ConditionalOnProperty(name = "media.storage-provider", havingValue = "local", matchIfMissing = true)
+public class LocalAudioStorage implements AudioStorage {
     private static final long MAX_FILE_SIZE = 25L * 1024 * 1024;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("mp3", "wav", "ogg", "m4a", "aac");
     private final Path root;

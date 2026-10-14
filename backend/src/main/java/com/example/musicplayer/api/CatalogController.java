@@ -7,7 +7,7 @@ import com.example.musicplayer.model.SongStatus;
 import com.example.musicplayer.repository.AlbumRepository;
 import com.example.musicplayer.repository.ArtistRepository;
 import com.example.musicplayer.repository.SongRepository;
-import com.example.musicplayer.service.LocalAudioStorage;
+import com.example.musicplayer.service.AudioStorage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -37,9 +37,9 @@ public class CatalogController {
     private final SongRepository songs;
     private final ArtistRepository artists;
     private final AlbumRepository albums;
-    private final LocalAudioStorage audioStorage;
+    private final AudioStorage audioStorage;
 
-    public CatalogController(SongRepository songs, ArtistRepository artists, AlbumRepository albums, LocalAudioStorage audioStorage) {
+    public CatalogController(SongRepository songs, ArtistRepository artists, AlbumRepository albums, AudioStorage audioStorage) {
         this.songs = songs;
         this.artists = artists;
         this.albums = albums;
@@ -145,9 +145,16 @@ public class CatalogController {
     }
 
     @GetMapping("/songs/{id}/stream")
-    public ResponseEntity<Resource> streamSong(@PathVariable UUID id) throws java.io.IOException {
+    public ResponseEntity<?> streamSong(@PathVariable UUID id) throws java.io.IOException {
         Song song = songs.findById(id).filter(s -> s.getStatus() == SongStatus.PUBLISHED)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found"));
+        var playbackUrl = audioStorage.playbackUrl(song.getAudioKey());
+        if (playbackUrl.isPresent()) {
+            return ResponseEntity.status(HttpStatus.TEMPORARY_REDIRECT)
+                    .header(HttpHeaders.LOCATION, playbackUrl.get())
+                    .header(HttpHeaders.CACHE_CONTROL, "no-store")
+                    .build();
+        }
         Resource audio = audioStorage.load(song.getAudioKey());
         return ResponseEntity.ok()
                 .header(HttpHeaders.ACCEPT_RANGES, "bytes")

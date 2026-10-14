@@ -9,3 +9,5 @@ frontend/.env.local
 work/
 outputs/
 .DS_Store
+.neon
+.env.local

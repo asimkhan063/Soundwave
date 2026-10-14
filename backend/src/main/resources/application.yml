@@ -29,7 +29,14 @@ frontend:
   origin: ${FRONTEND_ORIGIN:http://localhost:5173}
 
 media:
+  storage-provider: ${AUDIO_STORAGE_PROVIDER:local}
   storage-dir: ${AUDIO_STORAGE_DIR:./uploads}
+  s3:
+    endpoint: ${AWS_ENDPOINT_URL_S3:}
+    bucket: ${S3_BUCKET:}
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+    region: ${AWS_REGION:us-east-2}
 
 
 server:
