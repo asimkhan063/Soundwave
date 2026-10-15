@@ -62,6 +62,13 @@ h1 span { color: var(--green); }
 .chart-top-fifty > b { font: 700 9px 'DM Sans', sans-serif; letter-spacing: .22em; }
 .chart-description { color: #a4a69f; font-size: 12px; line-height: 1.5; }
 .charts-empty-note { margin: 19px 0 0; color: #74776e; font-size: 11px; }
+.chart-ranking { max-width: 760px; margin-top: 28px; }
+.chart-ranking h3 { margin: 0 0 10px; font-size: 16px; }
+.chart-ranking-row { display: grid; width: 100%; grid-template-columns: 34px minmax(120px, 1fr) minmax(100px, 1fr) 28px; align-items: center; gap: 12px; padding: 11px 8px; border: 0; border-bottom: 1px solid #282828; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.chart-ranking-row:hover { background: #1c1c1c; }
+.chart-ranking-row > span:first-child, .chart-ranking-row small { color: #929292; }
+.chart-ranking-row strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.chart-ranking-row small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .main-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); align-items: start; gap: 12px; }
 .main-layout > main { min-width: 0; padding: 0 22px; overflow: hidden; border-radius: 11px; background: linear-gradient(180deg, #171916 0, #10110f 420px); }
 .left-sidebar { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 9px; }
@@ -187,5 +194,6 @@ h2 { margin-bottom: 0; font-size: 27px; letter-spacing: -.055em; }
   .section-heading { align-items: flex-start; flex-direction: column; }.search-form { width: 100%; }
   .track-row { gap: 9px; }.track-number { width: 16px; }.cover-art { width: 39px; height: 39px; flex-basis: 39px; }
   .charts-section { padding: 30px 0 35px; }.charts-heading { align-items: flex-start; flex-direction: column; gap: 8px; }.chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 13px; }.chart-art { min-height: 145px; }
+  .chart-ranking-row { grid-template-columns: 25px minmax(90px, 1fr) 22px; gap: 8px; }.chart-ranking-row small { display: none; }
   .footer-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 34px 22px; padding-bottom: 35px; }.footer-bottom { align-items: flex-start; flex-direction: column; }.player-panel { gap: 8px; padding: 9px 12px; }.player-disc { width: 34px; height: 34px; flex-basis: 34px; }.player-controls { gap: 3px; }
 }

@@ -67,8 +67,9 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/actuator/health", "/api/auth/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/songs", "/api/songs/**", "/api/search",
+                        .requestMatchers(HttpMethod.GET, "/api/songs", "/api/songs/**", "/api/search", "/api/charts/top",
                                 "/api/artists", "/api/artists/**", "/api/albums", "/api/albums/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/songs/*/play").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)))

@@ -41,6 +41,8 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export const api = {
   songs: (query = '') => request<Song[]>(query ? `/api/search?q=${encodeURIComponent(query)}` : '/api/songs'),
+  topSongs: () => request<Song[]>('/api/charts/top?limit=10'),
+  recordPlay: (songId: string) => request<void>(`/api/songs/${songId}/play`, { method: 'POST' }),
   artists: () => request<Artist[]>('/api/artists'),
   albums: () => request<Album[]>('/api/albums'),
   createArtist: (name: string, token: string) => request<Artist>('/api/admin/artists', {

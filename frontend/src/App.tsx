@@ -5,6 +5,7 @@ const tokenKey = 'soundwave.access-token'
 
 export default function App() {
   const [songs, setSongs] = useState<Song[]>([])
+  const [topSongs, setTopSongs] = useState<Song[]>([])
   const [artists, setArtists] = useState<Artist[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
   const [playlists, setPlaylists] = useState<Playlist[]>([])
@@ -53,6 +54,10 @@ export default function App() {
     }
   }, [])
 
+  const loadTopSongs = useCallback(async () => {
+    try { setTopSongs(await api.topSongs()) } catch { /* Charts can load after the catalog. */ }
+  }, [])
+
   const loadLibrary = useCallback(async (authToken: string) => {
     try {
       const [userPlaylists, likedSongs] = await Promise.all([api.playlists(authToken), api.likedSongs(authToken)])
@@ -68,7 +73,7 @@ export default function App() {
     }
   }, [])
 
-  useEffect(() => { void loadCatalog() }, [loadCatalog])
+  useEffect(() => { void loadCatalog(); void loadTopSongs() }, [loadCatalog, loadTopSongs])
   useEffect(() => {
     void Promise.all([api.artists(), api.albums()]).then(([artistList, albumList]) => {
       setArtists(artistList)
@@ -332,6 +337,16 @@ export default function App() {
               <span className="chart-description">Explore the Soundwave India collection.</span>
             </button>
           </div>
+          <div className="chart-ranking" aria-live="polite">
+            <h3>Most played on Soundwave</h3>
+            {topSongs.length === 0 ? <p className="charts-empty-note">Play a track to start the Soundwave chart.</p> : topSongs.map((song, index) => (
+              <button className="chart-ranking-row" key={song.id} onClick={() => playSong(song)}>
+                <span>{String(index + 1).padStart(2, '0')}</span><strong>{song.title}</strong>
+                <small>{artists.find((artist) => artist.id === song.artistId)?.name ?? 'Independent artist'}</small>
+                <span>{currentSong?.id === song.id && isPlaying ? 'Ⅱ' : '▶'}</span>
+              </button>
+            ))}
+          </div>
           {songs.length === 0 && <p className="charts-empty-note">Charts will come alive as songs are added to the Soundwave library.</p>}
         </section>
 
@@ -443,6 +458,7 @@ export default function App() {
             </>}
             <section className="player-panel">
               <audio ref={audioRef} src={currentSong ? api.streamUrl(currentSong.id) : undefined}
+                onPlay={() => { if (currentSong) void api.recordPlay(currentSong.id).then(loadTopSongs).catch(() => {}) }}
                 onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
                 onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || currentSong?.durationSeconds || 0)}
                 onEnded={() => nextTrack(true)} />

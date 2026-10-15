@@ -11,7 +11,6 @@ import com.example.musicplayer.service.AudioStorage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +19,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ResponseStatusException;
 
 @RestController
@@ -57,6 +56,18 @@ public class CatalogController {
     @GetMapping("/songs")
     public List<SongResponse> listSongs() {
         return songs.findByStatusOrderByCreatedAtDesc(SongStatus.PUBLISHED).stream().map(this::toResponse).toList();
+    }
+
+    @GetMapping("/charts/top")
+    public List<SongResponse> topPlayed(@RequestParam(defaultValue = "50") @Min(1) @jakarta.validation.constraints.Max(50) int limit) {
+        return songs.findTopPlayed(limit).stream().map(this::toResponse).toList();
+    }
+
+    @PostMapping("/songs/{id}/play")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void recordPlay(@PathVariable UUID id) {
+        if (!songs.existsById(id)) throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Song not found");
+        songs.recordPlay(id);
     }
 
     @GetMapping("/songs/{id}")
