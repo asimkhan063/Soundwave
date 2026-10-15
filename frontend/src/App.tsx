@@ -31,6 +31,13 @@ export default function App() {
     ? likedSongs.filter((song) => song.title.toLowerCase().includes(query.trim().toLowerCase()))
     : songs
 
+  function browseCharts() {
+    setShowLikedOnly(false)
+    setQuery('')
+    void loadCatalog()
+    document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const loadCatalog = useCallback(async (search = '') => {
     try {
       setSongs(await api.songs(search))
@@ -283,10 +290,36 @@ export default function App() {
           <div className="hero-art" aria-hidden="true"><span>♫</span><i>♪</i><b>♫</b></div>
         </section>
 
+        <section className="charts-section" aria-labelledby="charts-title">
+          <div className="charts-heading">
+            <div><p className="eyebrow">SOUNDWAVE CHARTS</p><h2 id="charts-title">Find what’s moving.</h2></div>
+            <p>Global and India chart collections, inspired by the music people love.</p>
+          </div>
+          <div className="chart-grid">
+            <button className="chart-card chart-purple" onClick={browseCharts}>
+              <span className="chart-art"><strong>Top<br />Songs</strong><b>Global</b><small>↗ &nbsp; WEEKLY CHARTS</small></span>
+              <span className="chart-description">Your weekly update of the most played around the world.</span>
+            </button>
+            <button className="chart-card chart-red" onClick={browseCharts}>
+              <span className="chart-art"><strong>Top<br />Songs</strong><b>India</b><small>↗ &nbsp; WEEKLY CHARTS</small></span>
+              <span className="chart-description">Your weekly update of the most played in India.</span>
+            </button>
+            <button className="chart-card chart-blue" onClick={browseCharts}>
+              <span className="chart-art chart-top-fifty"><strong>Top 50</strong><b>GLOBAL</b></span>
+              <span className="chart-description">The tracks Soundwave listeners are discovering.</span>
+            </button>
+            <button className="chart-card chart-green" onClick={browseCharts}>
+              <span className="chart-art chart-top-fifty"><strong>Top 50</strong><b>INDIA</b></span>
+              <span className="chart-description">A snapshot of music in India.</span>
+            </button>
+          </div>
+          {songs.length === 0 && <p className="charts-empty-note">Charts will come alive as songs are added to the Soundwave library.</p>}
+        </section>
+
         {(error || notice) && <div className={error ? 'message error' : 'message success'} role="status">{error || notice}</div>}
 
         <section className="content-grid">
-          <div className="catalog-section">
+          <div className="catalog-section" id="catalog">
             <div className="section-heading">
               <div><p className="eyebrow">THE LIBRARY</p><h2>{showLikedOnly ? 'Liked songs' : 'Explore tracks'}</h2></div>
               <form className="search-form" onSubmit={(event) => { event.preventDefault(); if (!showLikedOnly) void loadCatalog(query.trim()) }}>

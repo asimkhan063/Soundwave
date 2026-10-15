@@ -40,6 +40,28 @@ h1 span { color: var(--green); }
 .hero-art span { text-shadow: 0 0 70px rgba(197,243,107,.55); }
 .hero-art i, .hero-art b { position: absolute; font-style: normal; font-size: 44px; opacity: .45; }
 .hero-art i { left: 37px; top: 39px; }.hero-art b { right: 35px; bottom: 35px; }
+.charts-section { padding: 39px 0 48px; border-bottom: 1px solid var(--line); }
+.charts-heading { display: flex; align-items: end; justify-content: space-between; gap: 24px; margin-bottom: 21px; }
+.charts-heading .eyebrow { margin-bottom: 8px; color: var(--green); }
+.charts-heading > p { max-width: 320px; margin: 0 0 2px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.chart-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 22px; }
+.chart-card { display: flex; min-width: 0; flex-direction: column; gap: 11px; padding: 0; border: 0; color: inherit; background: transparent; text-align: left; }
+.chart-card:hover .chart-art { transform: translateY(-3px); filter: brightness(1.08); }
+.chart-card:focus-visible { outline: 2px solid var(--green); outline-offset: 5px; border-radius: 5px; }
+.chart-art { position: relative; display: flex; min-height: 154px; flex-direction: column; align-items: flex-start; justify-content: flex-start; overflow: hidden; padding: 18px 15px 12px; border-radius: 7px; box-shadow: 0 10px 30px rgba(0,0,0,.2); transition: transform .2s ease, filter .2s ease; }
+.chart-art::after { position: absolute; right: -20px; bottom: -62px; width: 170px; height: 170px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; content: ''; box-shadow: 0 0 0 18px rgba(255,255,255,.045), 0 0 0 38px rgba(255,255,255,.035); }
+.chart-art strong { z-index: 1; font: 700 clamp(22px, 2.4vw, 32px)/.95 'Space Grotesk', sans-serif; letter-spacing: -.07em; }
+.chart-art > b { z-index: 1; margin-top: 3px; color: rgba(255,255,255,.7); font: 700 clamp(20px, 2.2vw, 29px)/1 'Space Grotesk', sans-serif; letter-spacing: -.06em; }
+.chart-art small { z-index: 1; margin-top: auto; font-size: 8px; font-weight: 700; letter-spacing: .1em; }
+.chart-purple .chart-art { background: linear-gradient(145deg, #9251ac, #552577); }
+.chart-red .chart-art { background: linear-gradient(145deg, #ec452d, #a92313); }
+.chart-blue .chart-art { align-items: center; background: linear-gradient(155deg, #28758a, #203762 72%); }
+.chart-green .chart-art { align-items: center; background: linear-gradient(155deg, #a5b96a, #0e7352 72%); }
+.chart-art.chart-top-fifty { justify-content: center; gap: 13px; }
+.chart-top-fifty strong { padding-bottom: 11px; border-bottom: 1px solid rgba(255,255,255,.45); text-align: center; }
+.chart-top-fifty > b { font: 700 9px 'DM Sans', sans-serif; letter-spacing: .22em; }
+.chart-description { color: #a4a69f; font-size: 12px; line-height: 1.5; }
+.charts-empty-note { margin: 19px 0 0; color: #74776e; font-size: 11px; }
 .message { margin: 18px 0 0; padding: 12px 15px; border-radius: 7px; font-size: 13px; }
 .message.error { color: #ffc4b9; background: #351d1b; border: 1px solid #743b34; }
 .message.success { color: #dcf3bd; background: #1c2916; border: 1px solid #435c30; }
@@ -116,6 +138,7 @@ footer span:first-child { color: #dfe3d8; font: 700 12px 'Space Grotesk', sans-s
 @media (max-width: 900px) {
   .app-shell { padding: 0 4%; }.content-grid { grid-template-columns: minmax(0, 1.3fr) minmax(250px, .8fr); gap: 25px; }
   .hero-art { right: -7%; opacity: .7; }
+  .chart-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }.chart-art { min-height: 136px; padding: 15px 11px 10px; }
 }
 @media (max-width: 680px) {
   .topbar { min-height: 70px; }.topbar-tag { display: none; }
@@ -124,4 +147,5 @@ footer span:first-child { color: #dfe3d8; font: 700 12px 'Space Grotesk', sans-s
   .content-grid { grid-template-columns: 1fr; padding-top: 38px; }
   .section-heading { align-items: flex-start; flex-direction: column; }.search-form { width: 100%; }
   .track-row { gap: 9px; }.track-number { width: 16px; }.cover-art { width: 39px; height: 39px; flex-basis: 39px; }
+  .charts-section { padding: 30px 0 35px; }.charts-heading { align-items: flex-start; flex-direction: column; gap: 8px; }.chart-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 13px; }.chart-art { min-height: 145px; }
 }
