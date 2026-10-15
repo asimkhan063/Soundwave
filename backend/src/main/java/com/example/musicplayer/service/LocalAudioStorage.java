@@ -88,6 +88,18 @@ public class LocalAudioStorage implements AudioStorage {
         }
     }
 
+    @Override
+    public void delete(String key) {
+        if (key == null || !key.matches("(?i)[0-9a-f-]{36}\\.(mp3|wav|ogg|m4a|aac)")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid audio key");
+        }
+        try {
+            Files.deleteIfExists(resolveKey(key));
+        } catch (IOException exception) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Could not delete stored audio", exception);
+        }
+    }
+
     public String contentType(String key) {
         String extension = key.substring(key.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
         return switch (extension) {

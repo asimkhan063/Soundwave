@@ -73,6 +73,7 @@ export const api = {
   uploadSong: (form: FormData, token: string) => request<Song>('/api/admin/songs/upload', {
     method: 'POST', body: form,
   }, token),
+  deleteSong: (songId: string, token: string) => request<void>(`/api/admin/songs/${songId}`, { method: 'DELETE' }, token),
   streamUrl: (songId: string) => `${apiBase}/api/songs/${songId}/stream`,
   coverUrl: (key: string) => `${apiBase}/api/media/covers/${encodeURIComponent(key.split('/').pop() ?? '')}`,
 }

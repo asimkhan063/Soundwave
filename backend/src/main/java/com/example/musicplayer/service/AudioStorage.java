@@ -7,6 +7,7 @@ import org.springframework.web.multipart.MultipartFile;
 public interface AudioStorage {
     String save(MultipartFile file);
     String saveCover(MultipartFile file);
+    void delete(String key);
     Resource load(String key);
     String contentType(String key);
 

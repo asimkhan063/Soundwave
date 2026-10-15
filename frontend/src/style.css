@@ -121,6 +121,8 @@ h2 { margin-bottom: 0; font-size: 27px; letter-spacing: -.055em; }
 .track-info strong { overflow: hidden; color: #f3f3ed; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .track-info span, .track-duration { color: #83867f; font-size: 11px; }
 .like-button { padding: 6px; border: 0; color: #858880; background: transparent; font-size: 19px; }
+.delete-song { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 50%; color: #aaa; background: transparent; font-size: 20px; line-height: 1; }
+.delete-song:hover { color: #ff7777; background: rgba(255,90,90,.12); }
 .like-button.liked { color: #f1808b; }
 .add-select { max-width: 94px; padding: 7px 5px; border: 1px solid var(--line); border-radius: 5px; color: #b9bcb3; background: #141613; font-size: 10px; }
 .empty-state { padding: 60px 22px; text-align: center; border: 1px dashed #34372f; border-radius: 12px; background: #10110f; }

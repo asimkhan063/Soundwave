@@ -187,6 +187,27 @@ export default function App() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Upload nahi ho paaya') }
   }
 
+  async function deleteSong(song: Song) {
+    if (!token || !window.confirm(`“${song.title}” ko delete karna hai?`)) return
+    try {
+      await api.deleteSong(song.id, token)
+      setSongs((items) => items.filter((item) => item.id !== song.id))
+      setLikedSongs((items) => items.filter((item) => item.id !== song.id))
+      setLikedIds((items) => items.filter((id) => id !== song.id))
+      setPlaylists((items) => items.map((playlist) => ({ ...playlist, songs: playlist.songs.filter((item) => item.id !== song.id) })))
+      setQueue((items) => items.filter((item) => item.id !== song.id))
+      setTopSongs((items) => items.filter((item) => item.id !== song.id))
+      if (currentSong?.id === song.id) {
+        setIsPlaying(false)
+        setCurrentSong(null)
+        setCurrentTime(0)
+        setDuration(0)
+      }
+      setNotice('Song aur uski audio file delete ho gayi.')
+      setError('')
+    } catch (err) { setError(err instanceof Error ? err.message : 'Song delete nahi hua') }
+  }
+
   async function createArtist(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     if (!token) return
@@ -378,6 +399,7 @@ export default function App() {
                     <div className="track-info"><strong>{song.title}</strong><span>{[artists.find((artist) => artist.id === song.artistId)?.name, albums.find((album) => album.id === song.albumId)?.title].filter(Boolean).join(' · ') || 'Independent artist'}</span></div>
                     <span className="track-duration">{formatDuration(song.durationSeconds)}</span>
                     <button className={likedIds.includes(song.id) ? 'like-button liked' : 'like-button'} aria-label={likedIds.includes(song.id) ? 'Unlike song' : 'Like song'} onClick={() => void toggleLike(song)}>{likedIds.includes(song.id) ? '♥' : '♡'}</button>
+                    {isAdmin && <button className="delete-song" aria-label={`Delete ${song.title}`} title="Delete song" onClick={() => void deleteSong(song)}>×</button>}
                     {playlists.length > 0 && <select className="add-select" aria-label={`Add ${song.title} to playlist`} defaultValue="" onChange={(event) => { if (event.target.value) void addToPlaylist(event.target.value, song.id); event.target.value = '' }}><option value="" disabled>＋ Playlist</option>{playlists.map((playlist) => <option value={playlist.id} key={playlist.id}>{playlist.name}</option>)}</select>}
                   </article>
                 ))}

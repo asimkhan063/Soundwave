@@ -21,6 +21,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
@@ -106,6 +107,18 @@ public class S3AudioStorage implements AudioStorage {
             return new ByteArrayResource(bytes);
         } catch (Exception exception) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Audio file not found", exception);
+        }
+    }
+
+    @Override
+    public void delete(String key) {
+        if (key == null || !key.matches("(?i)[0-9a-f-]{36}\\.(mp3|wav|ogg|m4a|aac)")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid audio key");
+        }
+        try {
+            s3.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build());
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not delete stored audio", exception);
         }
     }
 
