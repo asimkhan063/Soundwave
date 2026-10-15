@@ -205,11 +205,8 @@ export default function App() {
     event.preventDefault()
     if (!token) return
     const form = event.currentTarget
-    const data = new FormData(form)
-    const title = String(data.get('title') ?? '').trim()
-    const artistId = String(data.get('artistId') ?? '') || undefined
     try {
-      const album = await api.createAlbum(title, artistId, token)
+      const album = await api.createAlbum(new FormData(form), token)
       setAlbums((items) => [album, ...items])
       form.reset()
       setNotice('Album add ho gaya!')
@@ -377,7 +374,7 @@ export default function App() {
                   <article className="track-row" key={song.id}>
                     <span className="track-number">{String(index + 1).padStart(2, '0')}</span>
                     <button className="track-play" aria-label={`Play ${song.title}`} onClick={() => playSong(song)}>{currentSong?.id === song.id && isPlaying ? 'Ⅱ' : '▶'}</button>
-                    <div className="cover-art"><span>♫</span></div>
+                    <div className="cover-art">{(() => { const coverKey = albums.find((album) => album.id === song.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : <span>♫</span> })()}</div>
                     <div className="track-info"><strong>{song.title}</strong><span>{[artists.find((artist) => artist.id === song.artistId)?.name, albums.find((album) => album.id === song.albumId)?.title].filter(Boolean).join(' · ') || 'Independent artist'}</span></div>
                     <span className="track-duration">{formatDuration(song.durationSeconds)}</span>
                     <button className={likedIds.includes(song.id) ? 'like-button liked' : 'like-button'} aria-label={likedIds.includes(song.id) ? 'Unlike song' : 'Like song'} onClick={() => void toggleLike(song)}>{likedIds.includes(song.id) ? '♥' : '♡'}</button>
@@ -441,6 +438,7 @@ export default function App() {
                 <form className="inline-form" onSubmit={createAlbum}>
                   <label htmlFor="album-title">Album title</label><input id="album-title" name="title" maxLength={200} required placeholder="Album name" />
                   <label htmlFor="album-artist">Artist (optional)</label><select id="album-artist" name="artistId" defaultValue=""><option value="">No artist selected</option>{artists.map((artist) => <option key={artist.id} value={artist.id}>{artist.name}</option>)}</select>
+                  <label htmlFor="album-cover">Cover image (JPG, PNG, or WEBP, up to 5 MB)</label><input id="album-cover" name="coverFile" type="file" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp" />
                   <button className="button button-primary" type="submit">Add album</button>
                 </form>
               </section>
@@ -462,7 +460,7 @@ export default function App() {
                 onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
                 onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || currentSong?.durationSeconds || 0)}
                 onEnded={() => nextTrack(true)} />
-              <div className="player-disc">♫</div>
+              <div className="player-disc">{(() => { const coverKey = albums.find((album) => album.id === currentSong?.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : '♫' })()}</div>
               <div className="player-details"><p className="eyebrow">NOW PLAYING</p><strong>{currentSong?.title ?? 'Choose a track'}</strong>
                 <div className="player-progress"><span>{formatDuration(currentTime)}</span><input aria-label="Seek track" type="range" min="0" max={duration || 1} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => { const time = Number(event.target.value); setCurrentTime(time); if (audioRef.current) audioRef.current.currentTime = time }} /><span>{formatDuration(duration)}</span></div>
               </div>

@@ -110,6 +110,38 @@ public class CatalogController {
         return albums.save(album);
     }
 
+    @PostMapping(value = "/admin/albums/with-cover", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Album createAlbumWithCover(@RequestParam String title,
+                                      @RequestParam(required = false) UUID artistId,
+                                      @RequestParam(required = false) MultipartFile coverFile) {
+        if (title == null || title.isBlank() || title.length() > 200) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Album title is required");
+        }
+        if (artistId != null && !artists.existsById(artistId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Artist does not exist");
+        }
+        Album album = new Album();
+        album.setTitle(title.trim());
+        album.setArtistId(artistId);
+        if (coverFile != null && !coverFile.isEmpty()) album.setCoverKey(audioStorage.saveCover(coverFile));
+        return albums.save(album);
+    }
+
+    @GetMapping("/media/covers/{filename}")
+    public ResponseEntity<?> cover(@PathVariable String filename) throws java.io.IOException {
+        if (!filename.matches("(?i)[0-9a-f-]{36}\\.(jpg|jpeg|png|webp)")) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Cover not found");
+        }
+        String key = "covers/" + filename;
+        var playbackUrl = audioStorage.playbackUrl(key);
+        if (playbackUrl.isPresent()) return ResponseEntity.status(HttpStatus.TEMPORARY_REDIRECT)
+                .header(HttpHeaders.LOCATION, playbackUrl.get()).header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600").build();
+        Resource image = audioStorage.load(key);
+        return ResponseEntity.ok().header(HttpHeaders.CACHE_CONTROL, "public, max-age=3600")
+                .contentType(MediaType.parseMediaType(audioStorage.contentType(key)))
+                .contentLength(image.contentLength()).body(image);
+    }
+
     @PostMapping("/admin/songs")
     public SongResponse createSong(@Valid @RequestBody CreateSongRequest request) {
         if (request.artistId() != null && !artists.existsById(request.artistId())) {

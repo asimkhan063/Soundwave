@@ -30,6 +30,7 @@ import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignReques
 public class S3AudioStorage implements AudioStorage {
     private static final long MAX_FILE_SIZE = 25L * 1024 * 1024;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("mp3", "wav", "ogg", "m4a", "aac");
+    private static final Set<String> COVER_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
     private static final Duration PLAYBACK_URL_TTL = Duration.ofHours(1);
 
     private final String bucket;
@@ -81,6 +82,24 @@ public class S3AudioStorage implements AudioStorage {
     }
 
     @Override
+    public String saveCover(MultipartFile file) {
+        if (file == null || file.isEmpty()) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a cover image");
+        if (file.getSize() > 5L * 1024 * 1024) throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE, "Cover image must be 5 MB or smaller");
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+        int dot = name.lastIndexOf('.');
+        String extension = dot < 0 ? "" : name.substring(dot + 1).toLowerCase(Locale.ROOT);
+        if (!COVER_EXTENSIONS.contains(extension)) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cover must be JPG, PNG, or WEBP");
+        String key = "covers/" + UUID.randomUUID() + "." + extension;
+        try {
+            s3.putObject(PutObjectRequest.builder().bucket(bucket).key(key).contentType(contentType(key)).build(),
+                    RequestBody.fromBytes(file.getBytes()));
+            return key;
+        } catch (Exception exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Could not store cover image", exception);
+        }
+    }
+
+    @Override
     public Resource load(String key) {
         try {
             byte[] bytes = s3.getObjectAsBytes(GetObjectRequest.builder().bucket(bucket).key(key).build()).asByteArray();
@@ -102,6 +121,9 @@ public class S3AudioStorage implements AudioStorage {
     public String contentType(String key) {
         String extension = key.substring(key.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
         return switch (extension) {
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "webp" -> "image/webp";
             case "mp3" -> "audio/mpeg";
             case "wav" -> "audio/wav";
             case "ogg" -> "audio/ogg";

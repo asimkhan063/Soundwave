@@ -68,7 +68,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/actuator/health", "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/songs", "/api/songs/**", "/api/search", "/api/charts/top",
-                                "/api/artists", "/api/artists/**", "/api/albums", "/api/albums/**").permitAll()
+                                "/api/artists", "/api/artists/**", "/api/albums", "/api/albums/**",
+                                "/api/media/covers/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/songs/*/play").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

@@ -48,8 +48,8 @@ export const api = {
   createArtist: (name: string, token: string) => request<Artist>('/api/admin/artists', {
     method: 'POST', body: JSON.stringify({ name }),
   }, token),
-  createAlbum: (title: string, artistId: string | undefined, token: string) => request<Album>('/api/admin/albums', {
-    method: 'POST', body: JSON.stringify({ title, artistId: artistId || null }),
+  createAlbum: (form: FormData, token: string) => request<Album>('/api/admin/albums/with-cover', {
+    method: 'POST', body: form,
   }, token),
   register: (email: string, password: string) => request<AuthResponse>('/api/auth/register', {
     method: 'POST', body: JSON.stringify({ email, password }),
@@ -74,4 +74,5 @@ export const api = {
     method: 'POST', body: form,
   }, token),
   streamUrl: (songId: string) => `${apiBase}/api/songs/${songId}/stream`,
+  coverUrl: (key: string) => `${apiBase}/api/media/covers/${encodeURIComponent(key.split('/').pop() ?? '')}`,
 }
