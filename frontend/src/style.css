@@ -120,6 +120,8 @@ h2 { margin-bottom: 0; font-size: 27px; letter-spacing: -.055em; }
 .track-info { display: flex; flex: 1; min-width: 50px; flex-direction: column; gap: 5px; }
 .track-info strong { overflow: hidden; color: #f3f3ed; font-size: 12px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .track-info span, .track-duration { color: #83867f; font-size: 11px; }
+.music-credit { color: #a8d966; }
+.music-credit:hover { color: #d1f58c; text-decoration: underline; }
 .like-button { padding: 6px; border: 0; color: #858880; background: transparent; font-size: 19px; }
 .delete-song { width: 25px; height: 25px; padding: 0; border: 0; border-radius: 50%; color: #aaa; background: transparent; font-size: 20px; line-height: 1; }
 .delete-song:hover { color: #ff7777; background: rgba(255,90,90,.12); }
@@ -161,6 +163,7 @@ h2 { margin-bottom: 0; font-size: 27px; letter-spacing: -.055em; }
 .player-disc { display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 40px; border-radius: 50%; color: var(--green); background: #252b1f; font-size: 20px; }
 .player-details { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 5px; }
 .player-panel strong { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.player-credit { overflow: hidden; color: #a8d966; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
 .player-progress { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 8px; }
 .player-progress input { min-width: 20px; flex: 1; height: 3px; accent-color: var(--green); }
 .upload-panel input[type="file"] { height: auto; min-height: 42px; padding: 10px; font-size: 10px; }

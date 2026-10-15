@@ -5,6 +5,8 @@ const tokenKey = 'soundwave.access-token'
 
 export default function App() {
   const [songs, setSongs] = useState<Song[]>([])
+  const [sampleSongs, setSampleSongs] = useState<Song[]>([])
+  const [sampleCatalogEnabled, setSampleCatalogEnabled] = useState(false)
   const [topSongs, setTopSongs] = useState<Song[]>([])
   const [artists, setArtists] = useState<Artist[]>([])
   const [albums, setAlbums] = useState<Album[]>([])
@@ -30,7 +32,7 @@ export default function App() {
   const isAdmin = tokenRole(token) === 'ADMIN'
   const visibleSongs = showLikedOnly
     ? likedSongs.filter((song) => song.title.toLowerCase().includes(query.trim().toLowerCase()))
-    : songs
+    : [...songs, ...sampleSongs]
 
   function browseCharts() {
     setShowLikedOnly(false)
@@ -46,12 +48,19 @@ export default function App() {
   }
 
   const loadCatalog = useCallback(async (search = '') => {
-    try {
-      setSongs(await api.songs(search))
-      setError('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Songs load nahi ho paaye')
+    const [localResult, sampleResult] = await Promise.allSettled([api.songs(search), api.samples(search)])
+    if (localResult.status === 'fulfilled') setSongs(localResult.value)
+    if (sampleResult.status === 'fulfilled') {
+      setSampleCatalogEnabled(sampleResult.value.enabled)
+      setSampleSongs(sampleResult.value.tracks.map((track) => ({
+        id: `jamendo-${track.id}`, title: track.title, artistId: null, albumId: null, audioKey: '',
+        durationSeconds: track.durationSeconds, source: 'jamendo' as const, streamUrl: track.streamUrl,
+        artworkUrl: track.imageUrl, artistName: track.artistName, trackUrl: track.trackUrl, licenseUrl: track.licenseUrl,
+      })))
     }
+    if (localResult.status === 'rejected' && sampleResult.status === 'rejected') {
+      setError(localResult.reason instanceof Error ? localResult.reason.message : 'Songs load nahi ho paaye')
+    } else setError('')
   }, [])
 
   const loadTopSongs = useCallback(async () => {
@@ -238,7 +247,7 @@ export default function App() {
   function playSong(song: Song) {
     if (currentSong?.id === song.id) setIsPlaying((playing) => !playing)
     else {
-      setQueue(songs.some((item) => item.id === song.id) ? songs : [song])
+      setQueue(song.source ? [song] : songs.some((item) => item.id === song.id) ? songs : [song])
       setCurrentSong(song)
       setCurrentTime(0)
       setDuration(song.durationSeconds)
@@ -389,18 +398,18 @@ export default function App() {
               }}>Liked songs <span>{likedSongs.length}</span></button>
             </div>
 
-            {visibleSongs.length === 0 ? <div className="empty-state"><span>{showLikedOnly ? '♡' : '♫'}</span><h3>{showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.'}</p></div> :
+            {visibleSongs.length === 0 ? <div className="empty-state"><span>{showLikedOnly ? '♡' : '♫'}</span><h3>{showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Soundwave catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
               <div className="track-list">
                 {visibleSongs.map((song, index) => (
                   <article className="track-row" key={song.id}>
                     <span className="track-number">{String(index + 1).padStart(2, '0')}</span>
                     <button className="track-play" aria-label={`Play ${song.title}`} onClick={() => playSong(song)}>{currentSong?.id === song.id && isPlaying ? 'Ⅱ' : '▶'}</button>
-                    <div className="cover-art">{(() => { const coverKey = albums.find((album) => album.id === song.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : <span>♫</span> })()}</div>
-                    <div className="track-info"><strong>{song.title}</strong><span>{[artists.find((artist) => artist.id === song.artistId)?.name, albums.find((album) => album.id === song.albumId)?.title].filter(Boolean).join(' · ') || 'Independent artist'}</span></div>
+                    <div className="cover-art">{song.artworkUrl ? <img src={song.artworkUrl} alt="" /> : (() => { const coverKey = albums.find((album) => album.id === song.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : <span>♫</span> })()}</div>
+                    <div className="track-info"><strong>{song.title}</strong><span>{song.source === 'jamendo' ? <>{song.artistName} · <a className="music-credit" href={song.trackUrl} target="_blank" rel="noreferrer">Free music via Jamendo</a>{song.licenseUrl && <> · <a className="music-credit" href={song.licenseUrl} target="_blank" rel="noreferrer">License</a></>}</> : [artists.find((artist) => artist.id === song.artistId)?.name, albums.find((album) => album.id === song.albumId)?.title].filter(Boolean).join(' · ') || 'Independent artist'}</span></div>
                     <span className="track-duration">{formatDuration(song.durationSeconds)}</span>
-                    <button className={likedIds.includes(song.id) ? 'like-button liked' : 'like-button'} aria-label={likedIds.includes(song.id) ? 'Unlike song' : 'Like song'} onClick={() => void toggleLike(song)}>{likedIds.includes(song.id) ? '♥' : '♡'}</button>
-                    {isAdmin && <button className="delete-song" aria-label={`Delete ${song.title}`} title="Delete song" onClick={() => void deleteSong(song)}>×</button>}
-                    {playlists.length > 0 && <select className="add-select" aria-label={`Add ${song.title} to playlist`} defaultValue="" onChange={(event) => { if (event.target.value) void addToPlaylist(event.target.value, song.id); event.target.value = '' }}><option value="" disabled>＋ Playlist</option>{playlists.map((playlist) => <option value={playlist.id} key={playlist.id}>{playlist.name}</option>)}</select>}
+                    {!song.source && <button className={likedIds.includes(song.id) ? 'like-button liked' : 'like-button'} aria-label={likedIds.includes(song.id) ? 'Unlike song' : 'Like song'} onClick={() => void toggleLike(song)}>{likedIds.includes(song.id) ? '♥' : '♡'}</button>}
+                    {isAdmin && !song.source && <button className="delete-song" aria-label={`Delete ${song.title}`} title="Delete song" onClick={() => void deleteSong(song)}>×</button>}
+                    {!song.source && playlists.length > 0 && <select className="add-select" aria-label={`Add ${song.title} to playlist`} defaultValue="" onChange={(event) => { if (event.target.value) void addToPlaylist(event.target.value, song.id); event.target.value = '' }}><option value="" disabled>＋ Playlist</option>{playlists.map((playlist) => <option value={playlist.id} key={playlist.id}>{playlist.name}</option>)}</select>}
                   </article>
                 ))}
               </div>}
@@ -477,13 +486,14 @@ export default function App() {
               </section>
             </>}
             <section className="player-panel">
-              <audio ref={audioRef} src={currentSong ? api.streamUrl(currentSong.id) : undefined}
-                onPlay={() => { if (currentSong) void api.recordPlay(currentSong.id).then(loadTopSongs).catch(() => {}) }}
+              <audio ref={audioRef} src={currentSong ? currentSong.streamUrl ?? api.streamUrl(currentSong.id) : undefined}
+                onPlay={() => { if (currentSong && !currentSong.source) void api.recordPlay(currentSong.id).then(loadTopSongs).catch(() => {}) }}
                 onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
                 onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || currentSong?.durationSeconds || 0)}
                 onEnded={() => nextTrack(true)} />
-              <div className="player-disc">{(() => { const coverKey = albums.find((album) => album.id === currentSong?.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : '♫' })()}</div>
+              <div className="player-disc">{currentSong?.artworkUrl ? <img src={currentSong.artworkUrl} alt="" /> : (() => { const coverKey = albums.find((album) => album.id === currentSong?.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : '♫' })()}</div>
               <div className="player-details"><p className="eyebrow">NOW PLAYING</p><strong>{currentSong?.title ?? 'Choose a track'}</strong>
+                {currentSong?.source === 'jamendo' && <a className="player-credit" href={currentSong.trackUrl} target="_blank" rel="noreferrer">{currentSong.artistName} · Free music via Jamendo</a>}
                 <div className="player-progress"><span>{formatDuration(currentTime)}</span><input aria-label="Seek track" type="range" min="0" max={duration || 1} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => { const time = Number(event.target.value); setCurrentTime(time); if (audioRef.current) audioRef.current.currentTime = time }} /><span>{formatDuration(duration)}</span></div>
               </div>
               <div className="player-controls">

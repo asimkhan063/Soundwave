@@ -34,3 +34,5 @@ services:
         sync: false
       - key: AWS_REGION
         sync: false
+      - key: JAMENDO_CLIENT_ID
+        sync: false

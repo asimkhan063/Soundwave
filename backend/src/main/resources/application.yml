@@ -38,6 +38,9 @@ media:
     secret-key: ${AWS_SECRET_ACCESS_KEY:}
     region: ${AWS_REGION:us-east-2}
 
+jamendo:
+  client-id: ${JAMENDO_CLIENT_ID:}
+
 
 server:
   port: ${PORT:8181}

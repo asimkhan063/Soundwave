@@ -5,7 +5,15 @@ export type Song = {
   albumId: string | null
   audioKey: string
   durationSeconds: number
+  source?: 'jamendo'
+  streamUrl?: string
+  artworkUrl?: string
+  artistName?: string
+  trackUrl?: string
+  licenseUrl?: string
 }
+
+export type SampleCatalog = { enabled: boolean; tracks: Array<{ id: string; title: string; artistName: string; imageUrl: string; durationSeconds: number; streamUrl: string; trackUrl: string; licenseUrl: string }> }
 
 export type Artist = { id: string; name: string; imageUrl: string | null }
 export type Album = { id: string; title: string; artistId: string | null; coverKey: string | null; releaseDate: string | null }
@@ -41,6 +49,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export const api = {
   songs: (query = '') => request<Song[]>(query ? `/api/search?q=${encodeURIComponent(query)}` : '/api/songs'),
+  samples: (query = '') => request<SampleCatalog>(`/api/samples${query ? `?q=${encodeURIComponent(query)}` : ''}`),
   topSongs: () => request<Song[]>('/api/charts/top?limit=10'),
   recordPlay: (songId: string) => request<void>(`/api/songs/${songId}/play`, { method: 'POST' }),
   artists: () => request<Artist[]>('/api/artists'),
