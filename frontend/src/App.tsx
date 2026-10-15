@@ -38,6 +38,12 @@ export default function App() {
     document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
+  function focusSearch() {
+    setShowLikedOnly(false)
+    document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(() => document.querySelector<HTMLInputElement>('.search-form input')?.focus(), 350)
+  }
+
   const loadCatalog = useCallback(async (search = '') => {
     try {
       setSongs(await api.songs(search))
@@ -280,7 +286,20 @@ export default function App() {
         {token ? <button className="button button-quiet" onClick={logout}>Log out</button> : <a className="button button-quiet" href="#account">Log in</a>}
       </header>
 
-      <main id="home">
+      <div className="main-layout">
+        <aside className="left-sidebar" aria-label="Soundwave navigation">
+          <nav className="sidebar-primary">
+            <a href="#home"><span aria-hidden="true">⌂</span> Home</a>
+            <button onClick={focusSearch}><span aria-hidden="true">⌕</span> Search</button>
+          </nav>
+          <section className="sidebar-library">
+            <div className="sidebar-library-heading"><a href="#catalog">▤ &nbsp; Your Library</a><button aria-label="Create playlist" onClick={() => document.getElementById('account')?.scrollIntoView({ behavior: 'smooth' })}>＋</button></div>
+            {playlists.length === 0 ? <div className="sidebar-prompt"><strong>Create your first playlist</strong><p>Save the songs you love in one place.</p><a href="#account">Create playlist</a></div> : <div className="sidebar-playlists">{playlists.slice(0, 6).map((playlist) => <a href="#account" key={playlist.id}><span className="sidebar-playlist-icon">♫</span><span><strong>{playlist.name}</strong><small>Playlist · {playlist.songs.length} tracks</small></span></a>)}</div>}
+            <a className="sidebar-liked" href="#catalog" onClick={(event) => { if (!token) { event.preventDefault(); setError('Liked songs dekhne ke liye login karo.'); return } setShowLikedOnly(true) }}>♡ &nbsp; Liked songs</a>
+          </section>
+          <div className="sidebar-languages"><button>◎ &nbsp; English</button></div>
+        </aside>
+        <main id="home">
         <section className="hero">
           <div>
             <p className="eyebrow">YOUR SOUNDTRACK STARTS HERE</p>
@@ -298,19 +317,19 @@ export default function App() {
           <div className="chart-grid">
             <button className="chart-card chart-purple" onClick={browseCharts}>
               <span className="chart-art"><strong>Top<br />Songs</strong><b>Global</b><small>↗ &nbsp; WEEKLY CHARTS</small></span>
-              <span className="chart-description">Your weekly update of the most played around the world.</span>
+              <span className="chart-description">Discover tracks from the Soundwave global collection.</span>
             </button>
             <button className="chart-card chart-red" onClick={browseCharts}>
               <span className="chart-art"><strong>Top<br />Songs</strong><b>India</b><small>↗ &nbsp; WEEKLY CHARTS</small></span>
-              <span className="chart-description">Your weekly update of the most played in India.</span>
+              <span className="chart-description">Explore music featured in Soundwave India.</span>
             </button>
             <button className="chart-card chart-blue" onClick={browseCharts}>
               <span className="chart-art chart-top-fifty"><strong>Top 50</strong><b>GLOBAL</b></span>
-              <span className="chart-description">The tracks Soundwave listeners are discovering.</span>
+              <span className="chart-description">A collection of tracks from across Soundwave.</span>
             </button>
             <button className="chart-card chart-green" onClick={browseCharts}>
               <span className="chart-art chart-top-fifty"><strong>Top 50</strong><b>INDIA</b></span>
-              <span className="chart-description">A snapshot of music in India.</span>
+              <span className="chart-description">Explore the Soundwave India collection.</span>
             </button>
           </div>
           {songs.length === 0 && <p className="charts-empty-note">Charts will come alive as songs are added to the Soundwave library.</p>}
@@ -439,9 +458,19 @@ export default function App() {
             </section>
           </aside>
         </section>
-      </main>
+        </main>
+      </div>
 
-      <footer><span>soundwave</span><span>Made for the music in you.</span></footer>
+      <footer className="site-footer">
+        <div className="footer-columns">
+          <section className="footer-column"><h3>Company</h3><a href="#about">About</a><span>Jobs</span><span>For the Record</span></section>
+          <section className="footer-column"><h3>Communities</h3><span>For Artists</span><span>For Creators</span><span>For Authors</span><span>Developers</span><span>Advertising</span><span>Investors</span><span>Vendors</span></section>
+          <section className="footer-column"><h3>Useful links</h3><span>Support</span><span>Free Mobile App</span><a href="#catalog">Popular in Soundwave</a><a href="#charts-title">Top Songs</a><a href="#account">Import your music</a></section>
+          <section className="footer-column"><h3>Soundwave Plans</h3><span>Premium</span><span>Standard</span><span>Premium Family</span><span>Premium Student</span><span>Soundwave Free</span></section>
+        </div>
+        <section className="footer-about" id="about"><strong>About Soundwave</strong><p>A home for the songs you love. Discover tracks, build playlists, and make every moment sound like yours.</p></section>
+        <div className="footer-bottom"><span>© 2026 soundwave</span><div><a href="#about">Privacy</a><a href="#about">Terms</a><a href="#home">Accessibility</a><span>Made for the music in you.</span></div></div>
+      </footer>
     </div>
   )
 }
