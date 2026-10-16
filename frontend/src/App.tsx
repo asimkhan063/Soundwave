@@ -19,6 +19,8 @@ export default function App() {
   const [password, setPassword] = useState('')
   const [playlistName, setPlaylistName] = useState('')
   const [query, setQuery] = useState('')
+  const [isSearching, setIsSearching] = useState(false)
+  const searchRequestId = useRef(0)
   const [showLikedOnly, setShowLikedOnly] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
   const [error, setError] = useState('')
@@ -31,7 +33,7 @@ export default function App() {
   const audioRef = useRef<HTMLAudioElement>(null)
   const isAdmin = tokenRole(token) === 'ADMIN'
   const visibleSongs = showLikedOnly
-    ? likedSongs.filter((song) => song.title.toLowerCase().includes(query.trim().toLowerCase()))
+    ? likedSongs.filter((song) => `${song.title} ${song.artistName ?? artists.find((artist) => artist.id === song.artistId)?.name ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))
     : [...songs, ...sampleSongs]
 
   function browseCharts() {
@@ -48,7 +50,10 @@ export default function App() {
   }
 
   const loadCatalog = useCallback(async (search = '') => {
+    const requestId = ++searchRequestId.current
+    setIsSearching(true)
     const [localResult, sampleResult] = await Promise.allSettled([api.songs(search), api.samples(search)])
+    if (requestId !== searchRequestId.current) return
     if (localResult.status === 'fulfilled') setSongs(localResult.value)
     if (sampleResult.status === 'fulfilled') {
       setSampleCatalogEnabled(sampleResult.value.enabled)
@@ -61,6 +66,7 @@ export default function App() {
     if (localResult.status === 'rejected' && sampleResult.status === 'rejected') {
       setError(localResult.reason instanceof Error ? localResult.reason.message : 'Songs load nahi ho paaye')
     } else setError('')
+    setIsSearching(false)
   }, [])
 
   const loadTopSongs = useCallback(async () => {
@@ -83,6 +89,12 @@ export default function App() {
   }, [])
 
   useEffect(() => { void loadCatalog(); void loadTopSongs() }, [loadCatalog, loadTopSongs])
+  useEffect(() => {
+    const search = query.trim()
+    if (!search || showLikedOnly) return
+    const timer = window.setTimeout(() => { void loadCatalog(search) }, 350)
+    return () => window.clearTimeout(timer)
+  }, [query, showLikedOnly, loadCatalog])
   useEffect(() => {
     void Promise.all([api.artists(), api.albums()]).then(([artistList, albumList]) => {
       setArtists(artistList)
@@ -385,7 +397,8 @@ export default function App() {
               <div><p className="eyebrow">THE LIBRARY</p><h2>{showLikedOnly ? 'Liked songs' : 'Explore tracks'}</h2></div>
               <form className="search-form" onSubmit={(event) => { event.preventDefault(); if (!showLikedOnly) void loadCatalog(query.trim()) }}>
                 <span aria-hidden="true">⌕</span>
-                <input aria-label="Search songs" placeholder="Search songs" value={query} onChange={(event) => setQuery(event.target.value)} />
+                <input aria-label="Search songs or artists" placeholder="Search songs or artists" value={query} onChange={(event) => setQuery(event.target.value)} />
+                {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); if (!showLikedOnly) void loadCatalog() }}>×</button>}
                 <button type="submit" aria-label="Submit search">Search</button>
               </form>
             </div>
@@ -398,7 +411,7 @@ export default function App() {
               }}>Liked songs <span>{likedSongs.length}</span></button>
             </div>
 
-            {visibleSongs.length === 0 ? <div className="empty-state"><span>{showLikedOnly ? '♡' : '♫'}</span><h3>{showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Soundwave catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
+            {visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Soundwave catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
               <div className="track-list">
                 {visibleSongs.map((song, index) => (
                   <article className="track-row" key={song.id}>
