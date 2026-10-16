@@ -22,7 +22,7 @@ public class JamendoCatalogService {
 
     public boolean isEnabled() { return !clientId.isBlank(); }
 
-    public List<SampleTrack> search(String query) {
+    public List<SampleTrack> search(String query, String genre) {
         if (!isEnabled()) return List.of();
         var uriBuilder = UriComponentsBuilder.fromUriString("https://api.jamendo.com/v3.0/tracks/")
                 .queryParam("client_id", clientId)
@@ -34,6 +34,7 @@ public class JamendoCatalogService {
                 .queryParam("include", "licenses");
         if (query != null && !query.isBlank()) uriBuilder.queryParam("search", query.trim());
         else uriBuilder.queryParam("order", "popularity_week");
+        if (genre != null && !genre.isBlank()) uriBuilder.queryParam("tags", genre.trim());
 
         try {
             JsonNode response = client.get().uri(uriBuilder.build().encode().toUri()).retrieve().body(JsonNode.class);

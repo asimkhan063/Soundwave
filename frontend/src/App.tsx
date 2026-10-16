@@ -19,6 +19,7 @@ export default function App() {
   const [password, setPassword] = useState('')
   const [playlistName, setPlaylistName] = useState('')
   const [query, setQuery] = useState('')
+  const [genre, setGenre] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const searchRequestId = useRef(0)
   const [showLikedOnly, setShowLikedOnly] = useState(false)
@@ -34,11 +35,12 @@ export default function App() {
   const isAdmin = tokenRole(token) === 'ADMIN'
   const visibleSongs = showLikedOnly
     ? likedSongs.filter((song) => `${song.title} ${song.artistName ?? artists.find((artist) => artist.id === song.artistId)?.name ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))
-    : [...songs, ...sampleSongs]
+    : genre ? sampleSongs : [...songs, ...sampleSongs]
 
   function browseCharts() {
     setShowLikedOnly(false)
     setQuery('')
+    setGenre('')
     void loadCatalog()
     document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -49,10 +51,10 @@ export default function App() {
     window.setTimeout(() => document.querySelector<HTMLInputElement>('.search-form input')?.focus(), 350)
   }
 
-  const loadCatalog = useCallback(async (search = '') => {
+  const loadCatalog = useCallback(async (search = '', selectedGenre = '') => {
     const requestId = ++searchRequestId.current
     setIsSearching(true)
-    const [localResult, sampleResult] = await Promise.allSettled([api.songs(search), api.samples(search)])
+    const [localResult, sampleResult] = await Promise.allSettled([api.songs(search), api.samples(search, selectedGenre)])
     if (requestId !== searchRequestId.current) return
     if (localResult.status === 'fulfilled') setSongs(localResult.value)
     if (sampleResult.status === 'fulfilled') {
@@ -91,10 +93,10 @@ export default function App() {
   useEffect(() => { void loadCatalog(); void loadTopSongs() }, [loadCatalog, loadTopSongs])
   useEffect(() => {
     const search = query.trim()
-    if (!search || showLikedOnly) return
-    const timer = window.setTimeout(() => { void loadCatalog(search) }, 350)
+    if (showLikedOnly || (!search && !genre)) return
+    const timer = window.setTimeout(() => { void loadCatalog(search, genre) }, 350)
     return () => window.clearTimeout(timer)
-  }, [query, showLikedOnly, loadCatalog])
+  }, [query, genre, showLikedOnly, loadCatalog])
   useEffect(() => {
     void Promise.all([api.artists(), api.albums()]).then(([artistList, albumList]) => {
       setArtists(artistList)
@@ -395,10 +397,10 @@ export default function App() {
           <div className="catalog-section" id="catalog">
             <div className="section-heading">
               <div><p className="eyebrow">THE LIBRARY</p><h2>{showLikedOnly ? 'Liked songs' : 'Explore tracks'}</h2></div>
-              <form className="search-form" onSubmit={(event) => { event.preventDefault(); if (!showLikedOnly) void loadCatalog(query.trim()) }}>
+              <form className="search-form" onSubmit={(event) => { event.preventDefault(); if (!showLikedOnly) void loadCatalog(query.trim(), genre) }}>
                 <span aria-hidden="true">⌕</span>
                 <input aria-label="Search songs or artists" placeholder="Search songs or artists" value={query} onChange={(event) => setQuery(event.target.value)} />
-                {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); if (!showLikedOnly) void loadCatalog() }}>×</button>}
+                {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); if (!showLikedOnly) void loadCatalog('', genre) }}>×</button>}
                 <button type="submit" aria-label="Submit search">Search</button>
               </form>
             </div>
@@ -410,6 +412,12 @@ export default function App() {
                 setShowLikedOnly(true)
               }}>Liked songs <span>{likedSongs.length}</span></button>
             </div>
+
+            {!showLikedOnly && <div className="genre-filters" aria-label="Filter free music by genre">
+              {[['', 'All genres'], ['pop', 'Pop'], ['rock', 'Rock'], ['electronic', 'Electronic'], ['hiphop', 'Hip-Hop'], ['jazz', 'Jazz'], ['chillout', 'Chill'], ['classical', 'Classical']].map(([value, label]) =>
+                <button key={value || 'all'} type="button" className={genre === value ? 'genre-filter active' : 'genre-filter'} aria-pressed={genre === value} onClick={() => setGenre(value)}>{label}</button>
+              )}
+            </div>}
 
             {visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Soundwave catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
               <div className="track-list">

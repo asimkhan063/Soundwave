@@ -49,7 +49,14 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export const api = {
   songs: (query = '') => request<Song[]>(query ? `/api/search?q=${encodeURIComponent(query)}` : '/api/songs'),
-  samples: (query = '') => request<SampleCatalog>(`/api/samples${query ? `?q=${encodeURIComponent(query)}` : ''}`),
+  samples: (query = '', genre = '') => {
+    const params = new URLSearchParams()
+    if (query) params.set('q', query)
+    if (genre) params.set('genre', genre)
+    const serialized = params.toString()
+    const suffix = serialized ? `?${serialized}` : ''
+    return request<SampleCatalog>(`/api/samples${suffix}`)
+  },
   topSongs: () => request<Song[]>('/api/charts/top?limit=10'),
   recordPlay: (songId: string) => request<void>(`/api/songs/${songId}/play`, { method: 'POST' }),
   artists: () => request<Artist[]>('/api/artists'),
