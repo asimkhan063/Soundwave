@@ -77,8 +77,15 @@ export const api = {
   createPlaylist: (name: string, token: string) => request<Playlist>('/api/playlists', {
     method: 'POST', body: JSON.stringify({ name }),
   }, token),
-  addSong: (playlistId: string, songId: string, token: string) => request<Playlist>(`/api/playlists/${playlistId}/songs`, {
-    method: 'POST', body: JSON.stringify({ songId }),
+  addSong: (playlistId: string, song: Song, token: string) => request<Playlist>(`/api/playlists/${playlistId}/songs`, {
+    method: 'POST', body: JSON.stringify({
+      songId: song.id,
+      ...(song.source === 'jamendo' ? { sampleTrack: {
+        id: song.id.replace(/^jamendo-/, ''), title: song.title, artistName: song.artistName,
+        imageUrl: song.artworkUrl, durationSeconds: song.durationSeconds, streamUrl: song.streamUrl,
+        trackUrl: song.trackUrl, licenseUrl: song.licenseUrl,
+      } } : {}),
+    }),
   }, token),
   removeSong: (playlistId: string, songId: string, token: string) => request<void>(`/api/playlists/${playlistId}/songs/${songId}`, {
     method: 'DELETE',

@@ -157,10 +157,10 @@ export default function App() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Like save nahi hua') }
   }
 
-  async function addToPlaylist(playlistId: string, songId: string) {
+  async function addToPlaylist(playlistId: string, song: Song) {
     if (!token) return
     try {
-      const updated = await api.addSong(playlistId, songId, token)
+      const updated = await api.addSong(playlistId, song, token)
       setPlaylists((items) => items.map((item) => item.id === updated.id ? updated : item))
       setNotice('Song playlist mein add ho gaya!')
       setError('')
@@ -430,7 +430,7 @@ export default function App() {
                     <span className="track-duration">{formatDuration(song.durationSeconds)}</span>
                     {!song.source && <button className={likedIds.includes(song.id) ? 'like-button liked' : 'like-button'} aria-label={likedIds.includes(song.id) ? 'Unlike song' : 'Like song'} onClick={() => void toggleLike(song)}>{likedIds.includes(song.id) ? '♥' : '♡'}</button>}
                     {isAdmin && !song.source && <button className="delete-song" aria-label={`Delete ${song.title}`} title="Delete song" onClick={() => void deleteSong(song)}>×</button>}
-                    {!song.source && playlists.length > 0 && <select className="add-select" aria-label={`Add ${song.title} to playlist`} defaultValue="" onChange={(event) => { if (event.target.value) void addToPlaylist(event.target.value, song.id); event.target.value = '' }}><option value="" disabled>＋ Playlist</option>{playlists.map((playlist) => <option value={playlist.id} key={playlist.id}>{playlist.name}</option>)}</select>}
+                    {playlists.length > 0 && <select className="add-select" aria-label={`Add ${song.title} to playlist`} defaultValue="" onChange={(event) => { if (event.target.value) void addToPlaylist(event.target.value, song); event.target.value = '' }}><option value="" disabled>＋ Playlist</option>{playlists.map((playlist) => <option value={playlist.id} key={playlist.id}>{playlist.name}</option>)}</select>}
                   </article>
                 ))}
               </div>}

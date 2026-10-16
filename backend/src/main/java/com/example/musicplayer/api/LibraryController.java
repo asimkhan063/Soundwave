@@ -31,7 +31,7 @@ public class LibraryController {
     }
 
     public record CreatePlaylistRequest(@NotBlank @Size(max = 100) String name) { }
-    public record AddSongRequest(UUID songId) { }
+    public record AddSongRequest(String songId, SampleTrack sampleTrack) { }
 
     @PostMapping("/playlists")
     @ResponseStatus(HttpStatus.CREATED)
@@ -47,14 +47,14 @@ public class LibraryController {
     @PostMapping("/playlists/{playlistId}/songs")
     public PlaylistResponse addSong(@PathVariable UUID playlistId, @Valid @RequestBody AddSongRequest request,
                                     Authentication auth) {
-        if (request.songId() == null) throw new org.springframework.web.server.ResponseStatusException(
+        if (request.songId() == null || request.songId().isBlank()) throw new org.springframework.web.server.ResponseStatusException(
                 HttpStatus.BAD_REQUEST, "songId is required");
-        return library.addSong(currentUser.id(auth), playlistId, request.songId());
+        return library.addSong(currentUser.id(auth), playlistId, request.songId(), request.sampleTrack());
     }
 
     @DeleteMapping("/playlists/{playlistId}/songs/{songId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void removeSong(@PathVariable UUID playlistId, @PathVariable UUID songId, Authentication auth) {
+    public void removeSong(@PathVariable UUID playlistId, @PathVariable String songId, Authentication auth) {
         library.removeSong(currentUser.id(auth), playlistId, songId);
     }
 
