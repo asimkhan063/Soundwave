@@ -31,7 +31,8 @@ export type AuthResponse = {
   expiresInSeconds: number
 }
 
-const apiBase = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8181'
+const apiBase = import.meta.env.VITE_API_BASE_URL
+  ?? (import.meta.env.DEV ? 'http://localhost:8181' : 'https://soundwave-api-2ygs.onrender.com')
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   const headers = new Headers(options.headers)
