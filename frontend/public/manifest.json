@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Soundwave Music Player",
-  "short_name": "Soundwave",
-  "description": "Music for every mood.",
+  "name": "Mehfil Music Player",
+  "short_name": "Mehfil",
+  "description": "Har Dhun, Ek Ehsaas.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

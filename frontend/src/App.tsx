@@ -327,13 +327,13 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <a className="brand" href="#home"><span className="brand-mark">♪</span> soundwave</a>
-        <span className="topbar-tag">MUSIC FOR EVERY MOOD</span>
+        <a className="brand" href="#home"><span className="brand-mark">♪</span> Mehfil</a>
+        <span className="topbar-tag">Har Dhun, Ek Ehsaas</span>
         {token ? <button className="button button-quiet" onClick={logout}>Log out</button> : <a className="button button-quiet" href="#account">Log in</a>}
       </header>
 
       <div className="main-layout">
-        <aside className="left-sidebar" aria-label="Soundwave navigation">
+        <aside className="left-sidebar" aria-label="Mehfil navigation">
           <nav className="sidebar-primary">
             <a href="#home"><span aria-hidden="true">⌂</span> Home</a>
             <button onClick={focusSearch}><span aria-hidden="true">⌕</span> Search</button>
@@ -357,30 +357,30 @@ export default function App() {
 
         <section className="charts-section" aria-labelledby="charts-title">
           <div className="charts-heading">
-            <div><p className="eyebrow">SOUNDWAVE CHARTS</p><h2 id="charts-title">Find what’s moving.</h2></div>
+            <div><p className="eyebrow">MEHFIL CHARTS</p><h2 id="charts-title">Find what’s moving.</h2></div>
             <p>Global and India chart collections, inspired by the music people love.</p>
           </div>
           <div className="chart-grid">
             <button className="chart-card chart-purple" onClick={browseCharts}>
               <span className="chart-art"><strong>Top<br />Songs</strong><b>Global</b><small>↗ &nbsp; WEEKLY CHARTS</small></span>
-              <span className="chart-description">Discover tracks from the Soundwave global collection.</span>
+              <span className="chart-description">Discover tracks from the Mehfil global collection.</span>
             </button>
             <button className="chart-card chart-red" onClick={browseCharts}>
               <span className="chart-art"><strong>Top<br />Songs</strong><b>India</b><small>↗ &nbsp; WEEKLY CHARTS</small></span>
-              <span className="chart-description">Explore music featured in Soundwave India.</span>
+              <span className="chart-description">Explore music featured in Mehfil India.</span>
             </button>
             <button className="chart-card chart-blue" onClick={browseCharts}>
               <span className="chart-art chart-top-fifty"><strong>Top 50</strong><b>GLOBAL</b></span>
-              <span className="chart-description">A collection of tracks from across Soundwave.</span>
+              <span className="chart-description">A collection of tracks from across Mehfil.</span>
             </button>
             <button className="chart-card chart-green" onClick={browseCharts}>
               <span className="chart-art chart-top-fifty"><strong>Top 50</strong><b>INDIA</b></span>
-              <span className="chart-description">Explore the Soundwave India collection.</span>
+              <span className="chart-description">Explore the Mehfil India collection.</span>
             </button>
           </div>
           <div className="chart-ranking" aria-live="polite">
-            <h3>Most played on Soundwave</h3>
-            {topSongs.length === 0 ? <p className="charts-empty-note">Play a track to start the Soundwave chart.</p> : topSongs.map((song, index) => (
+            <h3>Most played on Mehfil</h3>
+            {topSongs.length === 0 ? <p className="charts-empty-note">Play a track to start the Mehfil chart.</p> : topSongs.map((song, index) => (
               <button className="chart-ranking-row" key={song.id} onClick={() => playSong(song)}>
                 <span>{String(index + 1).padStart(2, '0')}</span><strong>{song.title}</strong>
                 <small>{artists.find((artist) => artist.id === song.artistId)?.name ?? 'Independent artist'}</small>
@@ -388,7 +388,7 @@ export default function App() {
               </button>
             ))}
           </div>
-          {songs.length === 0 && <p className="charts-empty-note">Charts will come alive as songs are added to the Soundwave library.</p>}
+          {songs.length === 0 && <p className="charts-empty-note">Charts will come alive as songs are added to the Mehfil library.</p>}
         </section>
 
         {(error || notice) && <div className={error ? 'message error' : 'message success'} role="status">{error || notice}</div>}
@@ -419,7 +419,7 @@ export default function App() {
               )}
             </div>}
 
-            {visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Soundwave catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
+            {visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Mehfil catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
               <div className="track-list">
                 {visibleSongs.map((song, index) => (
                   <article className="track-row" key={song.id}>
@@ -532,11 +532,11 @@ export default function App() {
         <div className="footer-columns">
           <section className="footer-column"><h3>Company</h3><a href="#about">About</a><span>Jobs</span><span>For the Record</span></section>
           <section className="footer-column"><h3>Communities</h3><span>For Artists</span><span>For Creators</span><span>For Authors</span><span>Developers</span><span>Advertising</span><span>Investors</span><span>Vendors</span></section>
-          <section className="footer-column"><h3>Useful links</h3><span>Support</span><span>Free Mobile App</span><a href="#catalog">Popular in Soundwave</a><a href="#charts-title">Top Songs</a><a href="#account">Import your music</a></section>
-          <section className="footer-column"><h3>Soundwave Plans</h3><span>Premium</span><span>Standard</span><span>Premium Family</span><span>Premium Student</span><span>Soundwave Free</span></section>
+          <section className="footer-column"><h3>Useful links</h3><span>Support</span><span>Free Mobile App</span><a href="#catalog">Popular in Mehfil</a><a href="#charts-title">Top Songs</a><a href="#account">Import your music</a></section>
+          <section className="footer-column"><h3>Mehfil Plans</h3><span>Premium</span><span>Standard</span><span>Premium Family</span><span>Premium Student</span><span>Mehfil Free</span></section>
         </div>
-        <section className="footer-about" id="about"><strong>About Soundwave</strong><p>A home for the songs you love. Discover tracks, build playlists, and make every moment sound like yours.</p></section>
-        <div className="footer-bottom"><span>© 2026 soundwave</span><div><a href="#about">Privacy</a><a href="#about">Terms</a><a href="#home">Accessibility</a><span>Made for the music in you.</span></div></div>
+        <section className="footer-about" id="about"><strong>About Mehfil</strong><p>A home for the songs you love. Discover tracks, build playlists, and make every moment sound like yours.</p></section>
+        <div className="footer-bottom"><span>© 2026 Mehfil</span><div><a href="#about">Privacy</a><a href="#about">Terms</a><a href="#home">Accessibility</a><span>Har Dhun, Ek Ehsaas</span></div></div>
       </footer>
     </div>
   )
