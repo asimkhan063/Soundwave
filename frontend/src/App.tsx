@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
+import { Capacitor } from '@capacitor/core'
 import { api, type Album, type Artist, type Playlist, type Song } from './api'
+import { getDeviceTracks, type DeviceTrack } from './deviceMusic'
+import { backgroundPlayer } from './backgroundPlayer'
 
 const tokenKey = 'soundwave.access-token'
 
@@ -12,6 +15,9 @@ export default function App() {
   const [albums, setAlbums] = useState<Album[]>([])
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [likedSongs, setLikedSongs] = useState<Song[]>([])
+  const [deviceTracks, setDeviceTracks] = useState<DeviceTrack[]>([])
+  const [showDeviceTracks, setShowDeviceTracks] = useState(false)
+  const [isLoadingDeviceTracks, setIsLoadingDeviceTracks] = useState(false)
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('')
   const [likedIds, setLikedIds] = useState<string[]>([])
   const [token, setToken] = useState(() => localStorage.getItem(tokenKey) ?? '')
@@ -20,8 +26,10 @@ export default function App() {
   const [playlistName, setPlaylistName] = useState('')
   const [query, setQuery] = useState('')
   const [genre, setGenre] = useState('')
+  const [language, setLanguage] = useState('')
   const [isSearching, setIsSearching] = useState(false)
   const searchRequestId = useRef(0)
+  const initialCatalogFilters = useRef(true)
   const [showLikedOnly, setShowLikedOnly] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
   const [error, setError] = useState('')
@@ -32,15 +40,46 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration] = useState(0)
   const audioRef = useRef<HTMLAudioElement>(null)
+  const nativeTrackIdRef = useRef('')
+  const nextTrackRef = useRef<(autoAdvance?: boolean) => void>(() => {})
   const isAdmin = tokenRole(token) === 'ADMIN'
   const visibleSongs = showLikedOnly
     ? likedSongs.filter((song) => `${song.title} ${song.artistName ?? artists.find((artist) => artist.id === song.artistId)?.name ?? ''}`.toLowerCase().includes(query.trim().toLowerCase()))
-    : genre ? sampleSongs : [...songs, ...sampleSongs]
+    : (genre || language) ? sampleSongs : [...songs, ...sampleSongs]
+
+  async function browseDeviceTracks() {
+    setShowLikedOnly(false)
+    setShowDeviceTracks(true)
+    setError('')
+    setIsLoadingDeviceTracks(true)
+    try {
+      setDeviceTracks(await getDeviceTracks())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Phone ke songs nahi mil paaye')
+    } finally {
+      setIsLoadingDeviceTracks(false)
+    }
+  }
+
+  async function playDeviceTrack(track: DeviceTrack) {
+    try {
+      setError('')
+      const song: Song = {
+        id: `device-${track.id}`, title: track.title, artistId: null, albumId: null,
+        audioKey: '', durationSeconds: track.durationSeconds, source: 'device', nativeUri: track.uri,
+        artistName: track.artist,
+      }
+      playSong(song)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Phone ka song play nahi hua')
+    }
+  }
 
   function browseCharts() {
     setShowLikedOnly(false)
     setQuery('')
     setGenre('')
+    setLanguage('')
     void loadCatalog()
     document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
@@ -51,10 +90,10 @@ export default function App() {
     window.setTimeout(() => document.querySelector<HTMLInputElement>('.search-form input')?.focus(), 350)
   }
 
-  const loadCatalog = useCallback(async (search = '', selectedGenre = '') => {
+  const loadCatalog = useCallback(async (search = '', selectedGenre = '', selectedLanguage = '') => {
     const requestId = ++searchRequestId.current
     setIsSearching(true)
-    const [localResult, sampleResult] = await Promise.allSettled([api.songs(search), api.samples(search, selectedGenre)])
+    const [localResult, sampleResult] = await Promise.allSettled([api.songs(search), api.samples(search, selectedGenre, selectedLanguage)])
     if (requestId !== searchRequestId.current) return
     if (localResult.status === 'fulfilled') setSongs(localResult.value)
     if (sampleResult.status === 'fulfilled') {
@@ -93,10 +132,11 @@ export default function App() {
   useEffect(() => { void loadCatalog(); void loadTopSongs() }, [loadCatalog, loadTopSongs])
   useEffect(() => {
     const search = query.trim()
-    if (showLikedOnly || (!search && !genre)) return
-    const timer = window.setTimeout(() => { void loadCatalog(search, genre) }, 350)
+    if (initialCatalogFilters.current) { initialCatalogFilters.current = false; return }
+    if (showLikedOnly) return
+    const timer = window.setTimeout(() => { void loadCatalog(search, genre, language) }, 350)
     return () => window.clearTimeout(timer)
-  }, [query, genre, showLikedOnly, loadCatalog])
+  }, [query, genre, language, showLikedOnly, loadCatalog])
   useEffect(() => {
     void Promise.all([api.artists(), api.albums()]).then(([artistList, albumList]) => {
       setArtists(artistList)
@@ -111,6 +151,10 @@ export default function App() {
   useEffect(() => {
     const audio = audioRef.current
     if (!audio) return
+    if (Capacitor.isNativePlatform()) {
+      audio.pause()
+      return
+    }
     if (isPlaying && currentSong) {
       void audio.play().catch(() => {
         setIsPlaying(false)
@@ -118,6 +162,50 @@ export default function App() {
       })
     } else audio.pause()
   }, [isPlaying, currentSong])
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    let listener: { remove: () => Promise<void> } | undefined
+    void backgroundPlayer.addListener('playbackState', (state) => {
+      setIsPlaying(state.isPlaying)
+      setCurrentTime(state.positionSeconds)
+      if (state.durationSeconds > 0) setDuration(state.durationSeconds)
+    }).then((handle) => { listener = handle })
+    let endedListener: { remove: () => Promise<void> } | undefined
+    void backgroundPlayer.addListener('trackEnded', () => nextTrackRef.current(true)).then((handle) => { endedListener = handle })
+    return () => {
+      if (listener) void listener.remove()
+      if (endedListener) void endedListener.remove()
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return
+    if (!currentSong) {
+      nativeTrackIdRef.current = ''
+      void backgroundPlayer.pause().catch(() => {})
+      return
+    }
+
+    if (nativeTrackIdRef.current !== currentSong.id) {
+      nativeTrackIdRef.current = currentSong.id
+      const artistName = currentSong.artistName ?? artists.find((artist) => artist.id === currentSong.artistId)?.name ?? ''
+      const uri = currentSong.nativeUri ?? currentSong.streamUrl ?? api.streamUrl(currentSong.id)
+      void backgroundPlayer.playTrack({ uri, title: currentSong.title, artist: artistName, artworkUrl: currentSong.artworkUrl ?? '' })
+        .then(() => {
+          if (!currentSong.source) void api.recordPlay(currentSong.id).then(loadTopSongs).catch(() => {})
+        })
+        .catch((err) => {
+          nativeTrackIdRef.current = ''
+          setIsPlaying(false)
+          setError(err instanceof Error ? err.message : 'Song start nahi hua')
+        })
+    } else if (isPlaying) {
+      void backgroundPlayer.resume().catch(() => {})
+    } else {
+      void backgroundPlayer.pause().catch(() => {})
+    }
+  }, [currentSong, isPlaying, artists])
 
   async function submitAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -308,6 +396,8 @@ export default function App() {
     selectQueuedTrack(nextIndex)
   }
 
+  nextTrackRef.current = nextTrack
+
   function selectQueuedTrack(index: number) {
     const song = queue[index]
     if (!song) return
@@ -396,30 +486,38 @@ export default function App() {
         <section className="content-grid">
           <div className="catalog-section" id="catalog">
             <div className="section-heading">
-              <div><p className="eyebrow">THE LIBRARY</p><h2>{showLikedOnly ? 'Liked songs' : 'Explore tracks'}</h2></div>
-              <form className="search-form" onSubmit={(event) => { event.preventDefault(); if (!showLikedOnly) void loadCatalog(query.trim(), genre) }}>
+              <div><p className="eyebrow">THE LIBRARY</p><h2>{showDeviceTracks ? 'Phone songs' : showLikedOnly ? 'Liked songs' : 'Explore tracks'}</h2></div>
+              <form className="search-form" onSubmit={(event) => { event.preventDefault(); if (!showLikedOnly) void loadCatalog(query.trim(), genre, language) }}>
                 <span aria-hidden="true">⌕</span>
                 <input aria-label="Search songs or artists" placeholder="Search songs or artists" value={query} onChange={(event) => setQuery(event.target.value)} />
-                {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); if (!showLikedOnly) void loadCatalog('', genre) }}>×</button>}
+                {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); if (!showLikedOnly) void loadCatalog('', genre, language) }}>×</button>}
                 <button type="submit" aria-label="Submit search">Search</button>
               </form>
             </div>
 
             <div className="catalog-tabs" role="tablist" aria-label="Song library">
-              <button className={!showLikedOnly ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={!showLikedOnly} onClick={() => setShowLikedOnly(false)}>All tracks</button>
+              <button className={!showLikedOnly && !showDeviceTracks ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={!showLikedOnly && !showDeviceTracks} onClick={() => { setShowLikedOnly(false); setShowDeviceTracks(false) }}>All tracks</button>
               <button className={showLikedOnly ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={showLikedOnly} onClick={() => {
+                setShowDeviceTracks(false)
                 if (!token) { setError('Liked songs dekhne ke liye login karo.'); return }
                 setShowLikedOnly(true)
               }}>Liked songs <span>{likedSongs.length}</span></button>
+              <button className={showDeviceTracks ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={showDeviceTracks} onClick={() => void browseDeviceTracks()}>Phone songs</button>
             </div>
 
-            {!showLikedOnly && <div className="genre-filters" aria-label="Filter free music by genre">
+            {!showLikedOnly && !showDeviceTracks && <div className="genre-filters" aria-label="Filter free music by genre">
               {[['', 'All genres'], ['pop', 'Pop'], ['rock', 'Rock'], ['electronic', 'Electronic'], ['hiphop', 'Hip-Hop'], ['jazz', 'Jazz'], ['chillout', 'Chill'], ['classical', 'Classical']].map(([value, label]) =>
                 <button key={value || 'all'} type="button" className={genre === value ? 'genre-filter active' : 'genre-filter'} aria-pressed={genre === value} onClick={() => setGenre(value)}>{label}</button>
               )}
             </div>}
 
-            {visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Mehfil catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
+            {!showLikedOnly && !showDeviceTracks && <div className="language-filters" aria-label="Filter free music by language">
+              <span>Language</span>
+              <div className="language-options">{INDIAN_LANGUAGES.map(({ code, name }) => <button key={code || 'all'} type="button" className={language === code ? 'genre-filter active' : 'genre-filter'} aria-pressed={language === code} onClick={() => setLanguage(code)}>{name}</button>)}</div>
+              <p>Free licensed tracks only; results depend on which languages artists have tagged in the catalog.</p>
+            </div>}
+
+            {showDeviceTracks ? isLoadingDeviceTracks ? <div className="empty-state"><span>⌕</span><h3>Phone ke songs scan ho rahe hain…</h3><p>Mehfil sirf device ki audio library ki list read kar rahi hai.</p></div> : deviceTracks.length === 0 ? <div className="empty-state"><span>♫</span><h3>Phone mein songs nahi mile</h3><p>Audio files phone mein save hon aur phir Rescan dabao.</p><button className="button button-primary" onClick={() => void browseDeviceTracks()}>Rescan</button></div> : <div className="track-list">{deviceTracks.map((track, index) => <article className="track-row" key={track.id}><span className="track-number">{String(index + 1).padStart(2, '0')}</span><button className="track-play" aria-label={`Play ${track.title}`} onClick={() => void playDeviceTrack(track)}>{currentSong?.id === `device-${track.id}` && isPlaying ? 'Ⅱ' : '▶'}</button><div className="cover-art"><span>♫</span></div><div className="track-info"><strong>{track.title}</strong><span>{[track.artist, track.album].filter(Boolean).join(' · ') || 'Phone audio'}</span></div><span className="track-duration">{formatDuration(track.durationSeconds)}</span></article>)}</div> : visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : language ? 'Free tracks not found for this language' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : language ? 'Is free catalog mein is language ke tagged tracks abhi nahi mile. Dusri language try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Mehfil catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
               <div className="track-list">
                 {visibleSongs.map((song, index) => (
                   <article className="track-row" key={song.id}>
@@ -507,7 +605,7 @@ export default function App() {
               </section>
             </>}
             <section className="player-panel">
-              <audio ref={audioRef} src={currentSong ? currentSong.streamUrl ?? api.streamUrl(currentSong.id) : undefined}
+              <audio ref={audioRef} src={!Capacitor.isNativePlatform() && currentSong ? currentSong.streamUrl ?? api.streamUrl(currentSong.id) : undefined}
                 onPlay={() => { if (currentSong && !currentSong.source) void api.recordPlay(currentSong.id).then(loadTopSongs).catch(() => {}) }}
                 onTimeUpdate={(event) => setCurrentTime(event.currentTarget.currentTime)}
                 onLoadedMetadata={(event) => setDuration(event.currentTarget.duration || currentSong?.durationSeconds || 0)}
@@ -515,7 +613,7 @@ export default function App() {
               <div className="player-disc">{currentSong?.artworkUrl ? <img src={currentSong.artworkUrl} alt="" /> : (() => { const coverKey = albums.find((album) => album.id === currentSong?.albumId)?.coverKey; return coverKey ? <img src={api.coverUrl(coverKey)} alt="" /> : '♫' })()}</div>
               <div className="player-details"><p className="eyebrow">NOW PLAYING</p><strong>{currentSong?.title ?? 'Choose a track'}</strong>
                 {currentSong?.source === 'jamendo' && <a className="player-credit" href={currentSong.trackUrl} target="_blank" rel="noreferrer">{currentSong.artistName} · Free music via Jamendo</a>}
-                <div className="player-progress"><span>{formatDuration(currentTime)}</span><input aria-label="Seek track" type="range" min="0" max={duration || 1} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => { const time = Number(event.target.value); setCurrentTime(time); if (audioRef.current) audioRef.current.currentTime = time }} /><span>{formatDuration(duration)}</span></div>
+                <div className="player-progress"><span>{formatDuration(currentTime)}</span><input aria-label="Seek track" type="range" min="0" max={duration || 1} step="0.1" value={Math.min(currentTime, duration || 1)} onChange={(event) => { const time = Number(event.target.value); setCurrentTime(time); if (Capacitor.isNativePlatform()) void backgroundPlayer.seekTo({ positionSeconds: time }); else if (audioRef.current) audioRef.current.currentTime = time }} /><span>{formatDuration(duration)}</span></div>
               </div>
               <div className="player-controls">
                 <button className="skip-button" aria-label="Previous track" disabled={!currentSong} onClick={previousTrack}>|◀</button>
@@ -527,6 +625,13 @@ export default function App() {
         </section>
         </main>
       </div>
+
+      <nav className="mobile-nav" aria-label="Main navigation">
+        <a href="#home" aria-label="Home"><span>⌂</span><small>Home</small></a>
+        <a href="#catalog" aria-label="Search songs"><span>⌕</span><small>Search</small></a>
+        <a href="#account" aria-label="Your account"><span>♙</span><small>Profile</small></a>
+        <a href="#account" aria-label="Playlists"><span>▤</span><small>Library</small></a>
+      </nav>
 
       <footer className="site-footer">
         <div className="footer-columns">
@@ -541,6 +646,15 @@ export default function App() {
     </div>
   )
 }
+
+const INDIAN_LANGUAGES = [
+  { code: '', name: 'All' }, { code: 'hi', name: 'Hindi' }, { code: 'bn', name: 'Bengali' }, { code: 'te', name: 'Telugu' },
+  { code: 'mr', name: 'Marathi' }, { code: 'ta', name: 'Tamil' }, { code: 'ur', name: 'Urdu' }, { code: 'gu', name: 'Gujarati' },
+  { code: 'kn', name: 'Kannada' }, { code: 'or', name: 'Odia' }, { code: 'ml', name: 'Malayalam' }, { code: 'pa', name: 'Punjabi' },
+  { code: 'as', name: 'Assamese' }, { code: 'mai', name: 'Maithili' }, { code: 'sa', name: 'Sanskrit' }, { code: 'ks', name: 'Kashmiri' },
+  { code: 'kok', name: 'Konkani' }, { code: 'sd', name: 'Sindhi' }, { code: 'doi', name: 'Dogri' }, { code: 'mni', name: 'Manipuri' },
+  { code: 'brx', name: 'Bodo' }, { code: 'sat', name: 'Santali' }, { code: 'bho', name: 'Bhojpuri' }, { code: 'haryanvi', name: 'Haryanvi' }, { code: 'en', name: 'English' },
+]
 
 function formatDuration(seconds: number) {
   const safeSeconds = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0

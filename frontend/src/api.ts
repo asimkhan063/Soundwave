@@ -5,7 +5,8 @@ export type Song = {
   albumId: string | null
   audioKey: string
   durationSeconds: number
-  source?: 'jamendo'
+  source?: 'jamendo' | 'device'
+  nativeUri?: string
   streamUrl?: string
   artworkUrl?: string
   artistName?: string
@@ -50,10 +51,11 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export const api = {
   songs: (query = '') => request<Song[]>(query ? `/api/search?q=${encodeURIComponent(query)}` : '/api/songs'),
-  samples: (query = '', genre = '') => {
+  samples: (query = '', genre = '', language = '') => {
     const params = new URLSearchParams()
     if (query) params.set('q', query)
     if (genre) params.set('genre', genre)
+    if (language) params.set('language', language)
     const serialized = params.toString()
     const suffix = serialized ? `?${serialized}` : ''
     return request<SampleCatalog>(`/api/samples${suffix}`)
