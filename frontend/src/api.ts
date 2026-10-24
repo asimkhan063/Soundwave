@@ -43,7 +43,12 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   const response = await fetch(`${apiBase}${path}`, { ...options, headers })
   if (!response.ok) {
     const body = await response.json().catch(() => null)
-    throw new Error(body?.detail ?? body?.message ?? `Request failed (${response.status})`)
+    if (response.status === 401 && path === '/api/auth/login') {
+      throw new Error('Email/phone number ya password galat hai. Account banate waqt wala detail check karo.')
+    }
+    const message = body?.detail ?? body?.message
+    if (message) throw new Error(message)
+    throw new Error(`Request failed (${response.status})`)
   }
   if (response.status === 204) return undefined as T
   return response.json() as Promise<T>
@@ -70,11 +75,11 @@ export const api = {
   createAlbum: (form: FormData, token: string) => request<Album>('/api/admin/albums/with-cover', {
     method: 'POST', body: form,
   }, token),
-  register: (email: string, password: string) => request<AuthResponse>('/api/auth/register', {
-    method: 'POST', body: JSON.stringify({ email, password }),
+  register: (identifier: string, password: string) => request<AuthResponse>('/api/auth/register', {
+    method: 'POST', body: JSON.stringify({ identifier, password }),
   }),
-  login: (email: string, password: string) => request<AuthResponse>('/api/auth/login', {
-    method: 'POST', body: JSON.stringify({ email, password }),
+  login: (identifier: string, password: string) => request<AuthResponse>('/api/auth/login', {
+    method: 'POST', body: JSON.stringify({ identifier, password }),
   }),
   playlists: (token: string) => request<Playlist[]>('/api/playlists', {}, token),
   createPlaylist: (name: string, token: string) => request<Playlist>('/api/playlists', {

@@ -21,8 +21,11 @@ public class UserAccount {
     @Id @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(nullable = false, unique = true, length = 320)
+    @Column(unique = true, length = 320)
     private String email;
+
+    @Column(name = "phone_number", unique = true, length = 20)
+    private String phoneNumber;
 
     @Column(name = "password_hash", nullable = false, length = 100)
     private String passwordHash;

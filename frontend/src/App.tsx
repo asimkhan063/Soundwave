@@ -21,8 +21,9 @@ export default function App() {
   const [selectedPlaylistId, setSelectedPlaylistId] = useState('')
   const [likedIds, setLikedIds] = useState<string[]>([])
   const [token, setToken] = useState(() => localStorage.getItem(tokenKey) ?? '')
-  const [email, setEmail] = useState('')
+  const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [playlistName, setPlaylistName] = useState('')
   const [query, setQuery] = useState('')
   const [genre, setGenre] = useState('')
@@ -31,6 +32,7 @@ export default function App() {
   const searchRequestId = useRef(0)
   const initialCatalogFilters = useRef(true)
   const [showLikedOnly, setShowLikedOnly] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
   const [isRegister, setIsRegister] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -106,6 +108,10 @@ export default function App() {
     }
     if (localResult.status === 'rejected' && sampleResult.status === 'rejected') {
       setError(localResult.reason instanceof Error ? localResult.reason.message : 'Songs load nahi ho paaye')
+    } else if (localResult.status === 'rejected' && sampleResult.status === 'fulfilled' && sampleResult.value.tracks.length === 0) {
+      setError(localResult.reason instanceof Error ? localResult.reason.message : 'Songs load nahi ho paaye')
+    } else if (sampleResult.status === 'rejected' && localResult.status === 'fulfilled' && localResult.value.length === 0) {
+      setError(sampleResult.reason instanceof Error ? sampleResult.reason.message : 'Free songs load nahi ho paaye')
     } else setError('')
     setIsSearching(false)
   }, [])
@@ -211,10 +217,12 @@ export default function App() {
     event.preventDefault()
     setError('')
     try {
-      const result = isRegister ? await api.register(email, password) : await api.login(email, password)
+      const result = isRegister ? await api.register(identifier, password) : await api.login(identifier, password)
       localStorage.setItem(tokenKey, result.accessToken)
       setToken(result.accessToken)
       setPassword('')
+      setShowPassword(false)
+      setShowAuth(false)
       setNotice(isRegister ? 'Account ban gaya!' : 'Login ho gaya!')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login nahi ho paaya')
@@ -414,12 +422,18 @@ export default function App() {
     setNotice('Logout ho gaya.')
   }
 
+  function openAuth() {
+    setError('')
+    setIsRegister(false)
+    setShowAuth(true)
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
         <a className="brand" href="#home"><span className="brand-mark">♪</span> Mehfil</a>
         <span className="topbar-tag">Har Dhun, Ek Ehsaas</span>
-        {token ? <button className="button button-quiet" onClick={logout}>Log out</button> : <a className="button button-quiet" href="#account">Log in</a>}
+        {token ? <button className="button button-quiet" onClick={logout}>Log out</button> : <button className="button button-quiet" onClick={openAuth}>Log in</button>}
       </header>
 
       <div className="main-layout">
@@ -496,7 +510,7 @@ export default function App() {
             </div>
 
             <div className="catalog-tabs" role="tablist" aria-label="Song library">
-              <button className={!showLikedOnly && !showDeviceTracks ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={!showLikedOnly && !showDeviceTracks} onClick={() => { setShowLikedOnly(false); setShowDeviceTracks(false) }}>All tracks</button>
+              <button className={!showLikedOnly && !showDeviceTracks ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={!showLikedOnly && !showDeviceTracks} onClick={() => { setShowLikedOnly(false); setShowDeviceTracks(false); setGenre(''); setLanguage(''); setQuery(''); void loadCatalog() }}>All tracks</button>
               <button className={showLikedOnly ? 'catalog-tab active' : 'catalog-tab'} role="tab" aria-selected={showLikedOnly} onClick={() => {
                 setShowDeviceTracks(false)
                 if (!token) { setError('Liked songs dekhne ke liye login karo.'); return }
@@ -517,7 +531,7 @@ export default function App() {
               <p>Free licensed tracks only; results depend on which languages artists have tagged in the catalog.</p>
             </div>}
 
-            {showDeviceTracks ? isLoadingDeviceTracks ? <div className="empty-state"><span>⌕</span><h3>Phone ke songs scan ho rahe hain…</h3><p>Mehfil sirf device ki audio library ki list read kar rahi hai.</p></div> : deviceTracks.length === 0 ? <div className="empty-state"><span>♫</span><h3>Phone mein songs nahi mile</h3><p>Audio files phone mein save hon aur phir Rescan dabao.</p><button className="button button-primary" onClick={() => void browseDeviceTracks()}>Rescan</button></div> : <div className="track-list">{deviceTracks.map((track, index) => <article className="track-row" key={track.id}><span className="track-number">{String(index + 1).padStart(2, '0')}</span><button className="track-play" aria-label={`Play ${track.title}`} onClick={() => void playDeviceTrack(track)}>{currentSong?.id === `device-${track.id}` && isPlaying ? 'Ⅱ' : '▶'}</button><div className="cover-art"><span>♫</span></div><div className="track-info"><strong>{track.title}</strong><span>{[track.artist, track.album].filter(Boolean).join(' · ') || 'Phone audio'}</span></div><span className="track-duration">{formatDuration(track.durationSeconds)}</span></article>)}</div> : visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : language ? 'Free tracks not found for this language' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : language ? 'Is free catalog mein is language ke tagged tracks abhi nahi mile. Dusri language try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Mehfil catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p></div> :
+            {showDeviceTracks ? isLoadingDeviceTracks ? <div className="empty-state"><span>⌕</span><h3>Phone ke songs scan ho rahe hain…</h3><p>Mehfil sirf device ki audio library ki list read kar rahi hai.</p></div> : deviceTracks.length === 0 ? <div className="empty-state"><span>♫</span><h3>Phone mein songs nahi mile</h3><p>Audio files phone mein save hon aur phir Rescan dabao.</p><button className="button button-primary" onClick={() => void browseDeviceTracks()}>Rescan</button></div> : <div className="track-list">{deviceTracks.map((track, index) => <article className="track-row" key={track.id}><span className="track-number">{String(index + 1).padStart(2, '0')}</span><button className="track-play" aria-label={`Play ${track.title}`} onClick={() => void playDeviceTrack(track)}>{currentSong?.id === `device-${track.id}` && isPlaying ? 'Ⅱ' : '▶'}</button><div className="cover-art"><span>♫</span></div><div className="track-info"><strong>{track.title}</strong><span>{[track.artist, track.album].filter(Boolean).join(' · ') || 'Phone audio'}</span></div><span className="track-duration">{formatDuration(track.durationSeconds)}</span></article>)}</div> : visibleSongs.length === 0 ? <div className="empty-state"><span>{isSearching ? '⌕' : showLikedOnly ? '♡' : '♫'}</span><h3>{isSearching ? 'Searching…' : query.trim() ? 'No matching tracks' : language ? 'Free tracks not found for this language' : showLikedOnly ? 'No liked songs yet' : 'No tracks yet'}</h3><p>{isSearching ? 'Songs aur artists dhoondh rahe hain…' : query.trim() ? 'Dusra song ya artist name try karo.' : language ? 'Is free catalog mein is language ke tagged tracks abhi nahi mile. Dusri language try karo.' : showLikedOnly ? 'Catalog mein kisi track ko ♥ dabakar save karo.' : sampleCatalogEnabled ? 'Catalog mein songs add karne ke baad woh yahan dikhne lagenge.' : 'Mehfil catalog mein songs add karo, ya free music catalog connect karke yahan stream karo.'}</p>{!isSearching && !showLikedOnly && <button className="button button-primary" onClick={() => void loadCatalog(query.trim(), genre, language)}>Try again</button>}</div> :
               <div className="track-list">
                 {visibleSongs.map((song, index) => (
                   <article className="track-row" key={song.id}>
@@ -563,16 +577,9 @@ export default function App() {
                   })()}
                 </div>
               </> : <>
-                <p className="eyebrow">JOIN THE LISTENING ROOM</p><h2>{isRegister ? 'Create your account.' : 'Good music awaits.'}</h2>
+                <p className="eyebrow">JOIN THE LISTENING ROOM</p><h2>Good music awaits.</h2>
                 <p className="panel-copy">Sign in to like tracks and create your own playlists.</p>
-                <form className="inline-form" onSubmit={submitAuth}>
-                  <label htmlFor="email">Email</label>
-                  <input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(event) => setEmail(event.target.value)} required />
-                  <label htmlFor="password">Password</label>
-                  <input id="password" type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={isRegister ? 8 : undefined} placeholder={isRegister ? 'At least 8 characters' : 'Your password'} value={password} onChange={(event) => setPassword(event.target.value)} required />
-                  <button className="button button-primary" type="submit">{isRegister ? 'Create account' : 'Log in'}</button>
-                </form>
-                <button className="switch-auth" onClick={() => { setIsRegister((value) => !value); setError('') }}>{isRegister ? 'Already have an account? Log in' : 'New here? Create an account'}</button>
+                <button className="button button-primary" onClick={openAuth}>Log in or create account</button>
               </>}
             </section>
             {isAdmin && <>
@@ -626,10 +633,30 @@ export default function App() {
         </main>
       </div>
 
+      {showAuth && !token && <div className="auth-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setShowAuth(false) }}>
+        <section className="auth-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+          <button className="auth-close" aria-label="Close login" onClick={() => { setShowAuth(false); setError('') }}>×</button>
+          <p className="eyebrow">JOIN THE LISTENING ROOM</p><h2 id="auth-title">{isRegister ? 'Create your account.' : 'Welcome back.'}</h2>
+          <p className="panel-copy">{isRegister ? 'Mehfil par apni music library banao.' : 'Log in to save songs and make playlists.'}</p>
+          <form className="inline-form" onSubmit={submitAuth}>
+            <label htmlFor="auth-identifier">Email / Phone number</label>
+            <input id="auth-identifier" type="text" autoComplete="username" placeholder="Email ya phone number" value={identifier} onChange={(event) => setIdentifier(event.target.value)} required />
+            <label htmlFor="auth-password">Password</label>
+            <div className="password-field">
+              <input id="auth-password" type={showPassword ? 'text' : 'password'} autoComplete={isRegister ? 'new-password' : 'current-password'} minLength={isRegister ? 8 : undefined} placeholder={isRegister ? 'At least 8 characters' : 'Your password'} value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <button type="button" className="password-visibility" aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? '◉' : '◎'}</button>
+            </div>
+            {error && <p className="message error auth-error" role="alert">{error}</p>}
+            <button className="button button-primary" type="submit">{isRegister ? 'Create account' : 'Log in'}</button>
+          </form>
+          <button className="switch-auth" onClick={() => { setIsRegister((value) => !value); setError('') }}>{isRegister ? 'Already have an account? Log in' : 'New here? Create an account'}</button>
+        </section>
+      </div>}
+
       <nav className="mobile-nav" aria-label="Main navigation">
         <a href="#home" aria-label="Home"><span>⌂</span><small>Home</small></a>
         <a href="#catalog" aria-label="Search songs"><span>⌕</span><small>Search</small></a>
-        <a href="#account" aria-label="Your account"><span>♙</span><small>Profile</small></a>
+        <button aria-label={token ? 'Your profile' : 'Log in'} onClick={() => token ? document.getElementById('account')?.scrollIntoView({ behavior: 'smooth' }) : openAuth()}><span>♙</span><small>{token ? 'Profile' : 'Log in'}</small></button>
         <a href="#account" aria-label="Playlists"><span>▤</span><small>Library</small></a>
       </nav>
 

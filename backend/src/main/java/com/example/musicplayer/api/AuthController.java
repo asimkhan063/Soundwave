@@ -29,28 +29,60 @@ public class AuthController {
         this.tokens = tokens;
     }
 
-    public record RegisterRequest(@NotBlank @Email @Size(max = 320) String email,
+    public record RegisterRequest(String identifier, @Email @Size(max = 320) String email,
+                                  @Size(max = 30) String phoneNumber,
                                   @NotBlank @Size(min = 8, max = 72) String password) { }
-    public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) { }
+    public record LoginRequest(String identifier, @Email @Size(max = 320) String email,
+                               @Size(max = 30) String phoneNumber,
+                               @NotBlank String password) { }
 
     @PostMapping("/register")
     @Transactional
     public AuthResponse register(@Valid @RequestBody RegisterRequest request) {
-        String email = request.email().trim().toLowerCase();
-        if (users.existsByEmailIgnoreCase(email)) {
+        Contact contact = resolveContact(request.identifier(), request.email(), request.phoneNumber());
+        if (contact.email() != null && users.existsByEmailIgnoreCase(contact.email())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         }
+        if (contact.phoneNumber() != null && users.existsByPhoneNumber(contact.phoneNumber())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this phone number already exists");
+        }
         UserAccount user = new UserAccount();
-        user.setEmail(email);
+        user.setEmail(contact.email());
+        user.setPhoneNumber(contact.phoneNumber());
         user.setPasswordHash(passwordEncoder.encode(request.password()));
         return tokens.createToken(users.save(user));
     }
 
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
-        UserAccount user = users.findByEmailIgnoreCase(request.email().trim())
+        Contact contact = resolveContact(request.identifier(), request.email(), request.phoneNumber());
+        UserAccount user = (contact.email() != null
+                ? users.findByEmailIgnoreCase(contact.email())
+                : users.findByPhoneNumber(contact.phoneNumber()))
                 .filter(found -> passwordEncoder.matches(request.password(), found.getPasswordHash()))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email or password is incorrect"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email/phone number or password is incorrect"));
         return tokens.createToken(user);
+    }
+
+    private record Contact(String email, String phoneNumber) { }
+
+    private Contact resolveContact(String identifier, String email, String phoneNumber) {
+        String value = identifier != null && !identifier.isBlank() ? identifier.trim()
+                : email != null && !email.isBlank() ? email.trim()
+                : phoneNumber != null && !phoneNumber.isBlank() ? phoneNumber.trim() : null;
+        if (value == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email ya phone number likho");
+        }
+        if (value.contains("@")) {
+            if (!value.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Valid email address likho");
+            }
+            return new Contact(value.toLowerCase(), null);
+        }
+        String normalized = value.replaceAll("[\\s().-]", "");
+        if (!normalized.matches("\\+?[0-9]{7,15}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Valid phone number likho (7-15 digits)");
+        }
+        return new Contact(null, normalized);
     }
 }

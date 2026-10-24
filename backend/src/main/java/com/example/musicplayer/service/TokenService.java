@@ -29,7 +29,7 @@ public class TokenService {
                 .issuer("soundwave-api")
                 .issuedAt(now)
                 .expiresAt(expiresAt)
-                .subject(user.getEmail())
+                .subject(user.getEmail() != null ? user.getEmail() : user.getPhoneNumber())
                 .claim("uid", user.getId().toString())
                 .claim("role", user.getRole().name())
                 .build();
