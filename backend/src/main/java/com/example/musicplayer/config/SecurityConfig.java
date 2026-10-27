@@ -20,6 +20,8 @@ import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -60,20 +62,40 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter jwtConverter) throws Exception {
+    BearerTokenResolver bearerTokenResolver() {
+        DefaultBearerTokenResolver defaultResolver = new DefaultBearerTokenResolver();
+        return request -> {
+            String uri = request.getRequestURI();
+            boolean publicStream = "GET".equals(request.getMethod())
+                    && uri.matches("^.*/api/songs/[^/]+/stream$");
+            return publicStream ? null : defaultResolver.resolve(request);
+        };
+    }
+
+    @Bean
+    SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthenticationConverter jwtConverter,
+                                            BearerTokenResolver bearerTokenResolver) throws Exception {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/health", "/actuator/health", "/api/auth/**").permitAll()
+                        .requestMatchers(request -> {
+                            String uri = request.getRequestURI();
+                            boolean permittedStream = "GET".equals(request.getMethod())
+                                    && uri.matches("^.*/api/songs/[^/]+/stream$");
+                            return permittedStream;
+                        }).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/songs", "/api/songs/**", "/api/search", "/api/charts/top",
                                 "/api/artists", "/api/artists/**", "/api/albums", "/api/albums/**",
                                 "/api/media/covers/**", "/api/samples", "/api/samples/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/songs/*/play").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)))
+                .oauth2ResourceServer(oauth -> oauth
+                        .bearerTokenResolver(bearerTokenResolver)
+                        .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtConverter)))
                 .build();
     }
 
